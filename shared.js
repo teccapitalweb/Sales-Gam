@@ -1157,31 +1157,71 @@ function rollCommissionForDay(day, forceReroll = false) {
     state.commission.premiumUsedThisMonth -= 1;
   }
 
-  // Probabilidad inteligente para 1 premium al mes:
-  // - Base muy baja (~7%) durante todo el mes para que sea RARA y especial
-  // - Si quedan pocos rolls del mes y aún no salió la premium, subir gradualmente
-  //   para garantizar que aparezca al menos una vez
+  // ============== REGLAS POR DÍA ==============
+  // - Lunes: SOLO $12-$19 (nunca $20+, nunca premium)
+  // - Martes a Sábado: pueden salir $20-$24 (con tope semanal)
+  // - Premium $25-$30: solo 1 vez al mes, NUNCA en lunes (preferencia: sábado)
+
+  const isMonday = day === 'monday';
+
+  // Contar cuántos días de esta semana ya tienen monto en cada rango (excluyendo el día actual)
+  let weekHigh21To24 = 0;   // cuántos días con $21-$24
+  let weekTwenties = 0;     // cuántos días con $20+
+  WEEK_DAYS.forEach(d => {
+    if (d === day) return;
+    const ds = state.commission.byDay[d];
+    if (ds.revealed && ds.amount != null && !ds.premium) {
+      if (ds.amount >= 21 && ds.amount <= 24) weekHigh21To24++;
+      if (ds.amount >= 20) weekTwenties++;
+    }
+  });
+
+  // === DECIDIR PREMIUM ===
   const date = new Date();
   const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const daysLeft  = totalDays - date.getDate() + 1;
   const rollsLeftEstimate = Math.max(1, Math.round(daysLeft * 6 / 7));
   const premiumLeft = Math.max(0, PREMIUM_PER_MONTH - (state.commission.premiumUsedThisMonth || 0));
 
-  let premiumChance = 0;
-  if (premiumLeft > 0) {
-    // Base: 7% por roll → con ~24 rolls al mes sale ~82% de las veces
-    premiumChance = 0.07;
-    // Si quedan pocos rolls y aún no apareció, escalar para asegurar que salga
-    const minNeeded = premiumLeft / rollsLeftEstimate;
+  let isPremium = false;
+  if (!isMonday && premiumLeft > 0) {
+    let premiumChance = 0.07; // base baja: rara
+    const minNeeded = premiumLeft / Math.max(1, rollsLeftEstimate);
     if (minNeeded > premiumChance) premiumChance = minNeeded;
-    // Cap superior
     premiumChance = Math.min(0.85, premiumChance);
+    isPremium = Math.random() < premiumChance;
   }
 
-  const isPremium = premiumLeft > 0 && Math.random() < premiumChance;
-  const amount = isPremium
-    ? 25 + Math.floor(Math.random() * 6)   // 25–30
-    : 12 + Math.floor(Math.random() * 13); // 12–24
+  // === DECIDIR MONTO ===
+  let amount;
+  if (isPremium) {
+    amount = 25 + Math.floor(Math.random() * 6); // 25-30
+  } else if (isMonday) {
+    // Lunes SIEMPRE bajo: $12-$19
+    amount = 12 + Math.floor(Math.random() * 8); // 12-19
+  } else {
+    // Otros días: por default $12-$19, pero con cierta probabilidad puede ser $20-$24
+    // Reglas:
+    //   - Tope semanal: máximo 2 días con $20+
+    //   - Tope semanal: máximo 1 día con $21-$24
+    //   - Probabilidad base: 25% de "salir alto" (20+) si los topes lo permiten
+
+    const canBe20  = weekTwenties < 2;
+    const canBe21Plus = weekHigh21To24 < 1;
+
+    let highChance = 0.25; // 25% de chance de "alto" si caben
+    if (Math.random() < highChance && canBe20) {
+      // Sale "alto". ¿Cuánto?
+      if (canBe21Plus && Math.random() < 0.45) {
+        amount = 21 + Math.floor(Math.random() * 4); // 21-24
+      } else {
+        amount = 20; // solo 20
+      }
+    } else {
+      // Sale bajo: $12-$19
+      amount = 12 + Math.floor(Math.random() * 8); // 12-19
+    }
+  }
 
   state.commission.byDay[day] = {
     amount, premium: isPremium, revealed: true, revealedAt: Date.now()
@@ -1190,6 +1230,33 @@ function rollCommissionForDay(day, forceReroll = false) {
   saveState();
 
   return { day, amount, premium: isPremium, alreadyRolled: false };
+}
+
+// === Establecer manualmente el monto de un día (custom) ===
+function setManualCommission(day, amount) {
+  ensureCommissionState();
+  amount = Math.max(1, Math.min(99, parseInt(amount, 10) || 0));
+  if (amount === 0) return null;
+
+  const month = monthStr();
+  if (state.commission.month !== month) {
+    state.commission.month = month;
+    state.commission.premiumUsedThisMonth = 0;
+  }
+
+  const dayState = state.commission.byDay[day];
+  // Si tenía premium, devolver la premium al pool
+  if (dayState.premium && state.commission.premiumUsedThisMonth > 0) {
+    state.commission.premiumUsedThisMonth -= 1;
+  }
+
+  const isPremium = amount >= 25;
+  state.commission.byDay[day] = {
+    amount, premium: isPremium, revealed: true, revealedAt: Date.now()
+  };
+  if (isPremium) state.commission.premiumUsedThisMonth += 1;
+  saveState();
+  return { day, amount, premium: isPremium };
 }
 
 // === Comisión activa = la del último día revelado ===

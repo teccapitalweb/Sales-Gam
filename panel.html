@@ -223,9 +223,12 @@
   <div class="cp-stats" id="cpStats"></div>
 
   <div class="cp-info-banner">
-    💡 <strong>Tip:</strong> Cada día de la semana tiene su <strong style="color:#FFD93D;">propia comisión</strong>.
-    Pulsa el botón del día actual para revelar su monto a los vendedores. Los montos cambian cada vez. Las
-    <strong style="color:#5EEAD4;">comisiones acumuladas NO se pierden</strong> hasta que cierres la semana.
+    💡 <strong>Tip:</strong> Cada día tiene su <strong style="color:#FFD93D;">propia comisión</strong>.
+    El sistema rolea automáticamente entre <strong style="color:#5EEAD4;">$12–$19 (común)</strong> y
+    raramente <strong style="color:#FF8C42;">$20–$24</strong> (max 2× por semana).
+    <strong style="color:#FF4FB6;">Premium $25–$30</strong> solo 1× al mes.
+    Los <strong style="color:#B47CFF;">lunes</strong> siempre $12–$19.
+    También puedes <em>elegir el monto manualmente</em> al picar un día.
   </div>
 
   <div class="day-buttons-wrap">
@@ -533,10 +536,11 @@ function onDayButtonClick(day) {
 
   if (revealed) {
     const choice = prompt(
-      `${DAY_LABELS_ES[day]} ya reveló su comisión: $${ds.amount}${ds.premium ? ' ★ PREMIUM' : ''}\n\n` +
+      `${DAY_LABELS_ES[day]} ya tiene comisión: $${ds.amount}${ds.premium ? ' ★ PREMIUM' : ''}\n\n` +
       `¿Qué quieres hacer?\n\n` +
       `  1 = Repetir la animación con el MISMO monto\n` +
-      `  2 = ROLEAR un monto NUEVO para ${DAY_LABELS_ES[day]}\n` +
+      `  2 = ROLEAR un monto NUEVO automático\n` +
+      `  3 = ELEGIR el monto manualmente\n` +
       `  (cualquier otra cosa = cancelar)\n\n` +
       `Las comisiones acumuladas de cada vendedor NO se pierden.`
     );
@@ -546,12 +550,63 @@ function onDayButtonClick(day) {
     } else if (choice === '2') {
       triggerCommissionReveal(day, true);
       renderAll();
+    } else if (choice === '3') {
+      handleManualAmount(day);
     }
     return;
   }
 
-  // No revelado todavía: rolear y mostrar
-  triggerCommissionReveal(day, false);
+  // No revelado todavía: ofrecer opciones (auto o manual)
+  const action = prompt(
+    `${DAY_LABELS_ES[day]} aún no tiene comisión.\n\n` +
+    `¿Cómo quieres establecerla?\n\n` +
+    `  1 = ROLEAR automático (con animación dramática)\n` +
+    `  2 = ELEGIR el monto manualmente\n` +
+    `  (cualquier otra cosa = cancelar)`
+  );
+  if (action === '1') {
+    triggerCommissionReveal(day, false);
+    renderAll();
+  } else if (action === '2') {
+    handleManualAmount(day);
+  }
+}
+
+function handleManualAmount(day) {
+  const isMonday = day === 'monday';
+  const range = isMonday
+    ? '$12 a $19 (lunes nunca más alto)'
+    : '$12 a $30 (premium = $25-$30)';
+  const amountStr = prompt(
+    `Escribe el monto en MXN para ${DAY_LABELS_ES[day]}\n` +
+    `Rango sugerido: ${range}\n\n` +
+    `Ejemplo: 17`
+  );
+  if (amountStr == null) return; // canceló
+  const amount = parseInt(amountStr.trim(), 10);
+  if (isNaN(amount) || amount < 1 || amount > 99) {
+    alert('Monto inválido. Debe ser un número entre 1 y 99.');
+    return;
+  }
+  if (isMonday && amount > 19) {
+    if (!confirm(`⚠️ El lunes normalmente NO debería tener montos $20+.\n\n¿Aún así quieres establecer $${amount} para LUNES?`)) {
+      return;
+    }
+  }
+  const result = setManualCommission(day, amount);
+  if (!result) return;
+
+  // Ejecutar animación con el monto manual (sin re-rolear)
+  const data = {
+    day: result.day,
+    dayLabel: DAY_LABELS_ES[result.day],
+    amount: result.amount,
+    premium: result.premium,
+    alreadyRolled: false,
+    ts: Date.now()
+  };
+  try { localStorage.setItem(COMMISSION_REVEAL_KEY, JSON.stringify(data)); } catch (e) {}
+  showCommissionReveal(data);
   renderAll();
 }
 
