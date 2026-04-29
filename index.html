@@ -342,9 +342,9 @@
         <div class="value" id="totalSales" style="color: #5EEAD4; text-shadow: 0 0 20px #5EEAD4;">0</div>
       </div>
       <div class="title-block">
-        <div class="title-tag">TEC CAPITAL × IPCI</div>
+        <div class="title-tag">TEC CAPITAL GROUP</div>
         <h1 class="title-main">SALES ARENA</h1>
-        <div class="title-sub"><span class="live-dot"></span>EN VIVO · META <span id="weekTargetSpan">85</span></div>
+        <div class="phrase-rotator" id="phraseRotator">El que no vende no come · Vamos</div>
       </div>
       <div class="hud-stat right">
         <div class="label">▸ HORA</div>
@@ -356,6 +356,8 @@
       <div class="podium" id="podium"></div>
       <div id="benchHost"></div>
     </div>
+
+    <div class="stats-footer" id="statsFooter"></div>
   </div>
 </div>
 
@@ -443,8 +445,85 @@ function renderLeaderboard() {
   });
 }
 
+// ============== Stats Footer ==============
+function renderStatsFooter() {
+  const host = document.getElementById('statsFooter');
+  if (!host) return;
+
+  const top = getTopSeller();
+  const streak = getCurrentStreak();
+  const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+  const target = WEEK_TARGET;
+  const progress = Math.min(100, Math.round((total / target) * 100));
+
+  const parts = [];
+
+  if (top) {
+    parts.push(`
+      <div class="stat-pill" style="--accent: ${top.color}; --accent-alt: ${top.colorAlt}; --accent-40: ${top.color}66;">
+        <div class="stat-pill-icon">⭐</div>
+        <div class="stat-pill-info">
+          <div class="stat-pill-label">VENDEDOR DESTACADO</div>
+          <div class="stat-pill-value">${top.name}</div>
+          <div class="stat-pill-detail">${top.total} ventas · va al frente</div>
+        </div>
+      </div>
+    `);
+  } else {
+    parts.push(`
+      <div class="stat-pill" style="--accent: #B47CFF; --accent-alt: #9656FF; --accent-40: #B47CFF66;">
+        <div class="stat-pill-icon">⭐</div>
+        <div class="stat-pill-info">
+          <div class="stat-pill-label">VENDEDOR DESTACADO</div>
+          <div class="stat-pill-value">— · Sin ventas aún</div>
+          <div class="stat-pill-detail">El primero en cerrar lo toma</div>
+        </div>
+      </div>
+    `);
+  }
+
+  if (streak && streak.count >= 2) {
+    const ss = SELLER_BY_ID[streak.sellerId];
+    parts.push(`
+      <div class="stat-pill" style="--accent: ${ss.color}; --accent-alt: ${ss.colorAlt}; --accent-40: ${ss.color}66;">
+        <div class="stat-pill-icon">🔥</div>
+        <div class="stat-pill-info">
+          <div class="stat-pill-label">RACHA ACTIVA</div>
+          <div class="stat-pill-value">${ss.name} · ${streak.count} seguidas</div>
+          <div class="stat-pill-detail">Está prendiendo</div>
+        </div>
+      </div>
+    `);
+  } else {
+    parts.push(`
+      <div class="stat-pill" style="--accent: #FF8C42; --accent-alt: #FF6A1A; --accent-40: #FF8C4266;">
+        <div class="stat-pill-icon">🔥</div>
+        <div class="stat-pill-info">
+          <div class="stat-pill-label">RACHA ACTIVA</div>
+          <div class="stat-pill-value">Esperando · Aún sin racha</div>
+          <div class="stat-pill-detail">Encadena 2+ ventas para salir aquí</div>
+        </div>
+      </div>
+    `);
+  }
+
+  parts.push(`
+    <div class="stat-pill" style="--accent: #FFD93D; --accent-alt: #FF8C42; --accent-40: #FFD93D66;">
+      <div class="stat-pill-icon">🎯</div>
+      <div class="stat-pill-info">
+        <div class="stat-pill-label">PROGRESO DE EQUIPO</div>
+        <div class="stat-pill-value">${total} / ${target * SELLERS.length}</div>
+        <div class="stat-pill-detail">${total > 0 ? '¡Vamos por más!' : 'A levantar el teléfono'}</div>
+      </div>
+    </div>
+  `);
+
+  host.innerHTML = parts.join('');
+}
+
 function renderAll() {
   renderLeaderboard();
+  renderStatsFooter();
   resetIdleTimer();
 }
 
@@ -457,12 +536,12 @@ updateClock();
 setInterval(updateClock, 1000);
 
 // ============== Init ==============
-document.getElementById('weekTargetSpan').textContent = WEEK_TARGET;
 prevTopIds = getRanked().slice(0, 4).map(r => r.id);
 prevLeader = getRanked()[0]?.id;
 initParticles();
 setupCrossTabSync();
 renderAll();
+startPhraseRotator();
 </script>
 
 </body>

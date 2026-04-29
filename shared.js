@@ -294,10 +294,15 @@ function fireEvent(ev) {
       spawnSpark(pillar, seller.color);
     }, 60);
     flyingPlus(seller.color);
+    // Streak pop
+    showStreakPop(seller, state.sellers[seller.id]);
+    showContextPhrase(PHRASES_AFTER_SALE, 4000);
   }
   if (ev.type === 'SALE_OUTSIDER') {
     outsiderPop(seller);
     smallConfetti(seller.color);
+    showStreakPop(seller, state.sellers[seller.id]);
+    showContextPhrase(PHRASES_AFTER_SALE, 4000);
   }
   if (ev.type === 'CLIMB') {
     setTimeout(() => {
@@ -320,6 +325,7 @@ function fireEvent(ev) {
   if (ev.type === 'NEW_LEADER') {
     showLeaderBanner(seller);
     bigConfetti(seller.color, seller.colorAlt);
+    showContextPhrase(PHRASES_NEW_LEADER, 5000);
   }
   if (ev.type === 'GOAL_REACHED') {
     showGoalBanner(seller);
@@ -468,22 +474,30 @@ function closeWeek(triggeredLocally = true) {
     return;
   }
 
-  let bestPage = null, bestPageCount = 0;
-  winner.pages.forEach(p => {
-    const c = state.pages[p] || 0;
-    if (c > bestPageCount) { bestPageCount = c; bestPage = p; }
+  // Top 3
+  const top3 = ranked.slice(0, 3).map(s => {
+    let bestPage = null, bestPageCount = 0;
+    s.pages.forEach(p => {
+      const c = state.pages[p] || 0;
+      if (c > bestPageCount) { bestPageCount = c; bestPage = p; }
+    });
+    if (!bestPage) bestPage = s.pages[0];
+    return {
+      sellerId: s.id, name: s.name, avatar: s.avatar,
+      color: s.color, colorAlt: s.colorAlt,
+      total: s.total, bestPage, bestPageCount,
+      pages: s.pages
+    };
   });
-  if (!bestPage) bestPage = winner.pages[0];
+
+  // Stats extras
+  const totalWeek = ranked.reduce((sum, s) => sum + s.total, 0);
+  const bestStreak = computeBestStreak();
 
   const data = {
-    sellerId: winner.id,
-    name: winner.name,
-    avatar: winner.avatar,
-    color: winner.color,
-    colorAlt: winner.colorAlt,
-    total: winner.total,
-    bestPage,
-    bestPageCount,
+    top3,
+    totalWeek,
+    bestStreak,
     ts: Date.now()
   };
 
@@ -493,30 +507,104 @@ function closeWeek(triggeredLocally = true) {
   showCeremony(data);
 }
 
+// Calcular mejor racha consecutiva
+function computeBestStreak() {
+  const hist = state.history || [];
+  if (!hist.length) return { sellerId: null, count: 0 };
+
+  let bestId = null, bestCount = 0;
+  let curId = null, curCount = 0;
+  hist.forEach(h => {
+    if (h.sellerId === curId) {
+      curCount++;
+    } else {
+      curId = h.sellerId;
+      curCount = 1;
+    }
+    if (curCount > bestCount) {
+      bestCount = curCount;
+      bestId = curId;
+    }
+  });
+  return { sellerId: bestId, count: bestCount };
+}
+
 function showCeremony(data) {
   const overlay = document.createElement('div');
   overlay.className = 'ceremony-overlay';
-  overlay.style.cssText = `--accent: ${data.color}; --accent-alt: ${data.colorAlt};`;
+
+  // Backwards compat: si vienen datos viejos con un solo ganador
+  const top3 = data.top3 || [{
+    sellerId: data.sellerId, name: data.name, avatar: data.avatar,
+    color: data.color, colorAlt: data.colorAlt, total: data.total,
+    bestPage: data.bestPage, bestPageCount: data.bestPageCount,
+    pages: SELLER_BY_ID[data.sellerId]?.pages || []
+  }];
+
+  const winner = top3[0];
+  const second = top3[1];
+  const third  = top3[2];
+
+  const streakSeller = data.bestStreak?.sellerId ? SELLER_BY_ID[data.bestStreak.sellerId] : null;
+  const streakHtml = streakSeller && data.bestStreak.count > 1 ? `
+    <div class="ceremony-extra">
+      <div class="ceremony-extra-label">🔥 MEJOR RACHA</div>
+      <div class="ceremony-extra-value">${streakSeller.name} · ${data.bestStreak.count}</div>
+    </div>` : '';
+
+  const totalHtml = data.totalWeek != null ? `
+    <div class="ceremony-extra">
+      <div class="ceremony-extra-label">🎯 TOTAL DE LA SEMANA</div>
+      <div class="ceremony-extra-value">${data.totalWeek} ventas</div>
+    </div>` : '';
+
+  const winnerPagesText = winner.pages && winner.pages.length > 1
+    ? `Mejor: ${winner.bestPage} (${winner.bestPageCount})`
+    : (winner.bestPage || winner.pages?.[0] || '');
+
+  function spotHtml(seller, place) {
+    if (!seller) return '<div class="podium-spot"></div>';
+    const pageText = seller.pages && seller.pages.length > 1
+      ? `${seller.bestPage} · ${seller.bestPageCount} ventas`
+      : (seller.bestPage || seller.pages?.[0] || '');
+    const crownHtml = place === 'first' ? '<div class="podium-crown">👑</div>' : '';
+    const placeNum = place === 'first' ? '1°' : place === 'second' ? '2°' : '3°';
+
+    return `
+      <div class="podium-spot ${place}">
+        ${crownHtml}
+        <div class="podium-avatar">
+          ${avatarSVG(seller.avatar, seller.color, seller.colorAlt, place === 'first' ? 110 : place === 'second' ? 90 : 78)}
+        </div>
+        <div class="podium-name" style="color: ${seller.color}; text-shadow: 0 0 16px ${seller.color}">${seller.name}</div>
+        <div class="podium-pages">${pageText}</div>
+        <div class="podium-sales" style="color: ${seller.color}; text-shadow: 0 0 16px ${seller.color}">${seller.total} VENTAS</div>
+        <div class="podium-block">
+          <div class="place">${placeNum}</div>
+        </div>
+      </div>
+    `;
+  }
 
   overlay.innerHTML = `
-    <div class="ceremony-stage">
-      <div class="ceremony-rings"></div>
-      <div class="ceremony-avatar">
-        ${avatarSVG(data.avatar, data.color, data.colorAlt, 280)}
-      </div>
+    <div class="ceremony-rays"></div>
+    <button class="ceremony-close" data-action="close">✕</button>
+    <h1 class="ceremony-title">
+      <span class="trophy">🏆</span>
+      GANADORES DE LA SEMANA
+      <span class="trophy">🏆</span>
+    </h1>
+    <div class="podium-stage">
+      ${spotHtml(second, 'second')}
+      ${spotHtml(winner, 'first')}
+      ${spotHtml(third,  'third')}
     </div>
-    <div class="ceremony-tag">◆ ◆ ◆  GANADOR DE LA SEMANA  ◆ ◆ ◆</div>
-    <div class="ceremony-name">${data.name.toUpperCase()}</div>
-    <div class="ceremony-stats">
-      <div class="ceremony-stat">
-        <div class="ceremony-stat-label">TOTAL DE VENTAS</div>
-        <div class="ceremony-stat-value">${data.total}</div>
-      </div>
-      <div class="ceremony-stat">
-        <div class="ceremony-stat-label">CONSULTORA GANADORA</div>
-        <div class="ceremony-stat-value small">${data.bestPage}</div>
-        <div class="ceremony-stat-label" style="margin-top: 6px;">${data.bestPageCount} ventas</div>
-      </div>
+    <div class="ceremony-extras">
+      ${totalHtml}
+      ${streakHtml}
+    </div>
+    <div class="ceremony-message">
+      ¡FELICIDADES EQUIPO! · MAÑANA VAMOS POR MÁS 🚀
     </div>
     <div class="ceremony-actions">
       <button class="btn-primary" data-action="new-week">🎯 INICIAR NUEVA SEMANA</button>
@@ -528,22 +616,29 @@ function showCeremony(data) {
   void overlay.offsetWidth;
   overlay.classList.add('visible');
 
-  setTimeout(() => massiveConfetti(data.color, data.colorAlt), 3000);
-  setTimeout(() => massiveConfetti(data.color, data.colorAlt), 4200);
-  setTimeout(() => massiveConfetti(data.color, data.colorAlt), 5200);
+  // Confeti orquestado
+  setTimeout(() => massiveConfetti(winner.color, winner.colorAlt), 800);
+  setTimeout(() => massiveConfetti('#FFD93D', '#FF8C42'), 1600);
+  setTimeout(() => massiveConfetti(winner.color, '#FF4FB6'), 2600);
+  setTimeout(() => massiveConfetti('#FFD93D', '#5EEAD4'), 3800);
 
-  overlay.querySelector('[data-action="close"]').addEventListener('click', () => {
-    overlay.style.opacity = '0';
-    setTimeout(() => overlay.remove(), 600);
+  overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      setTimeout(() => overlay.remove(), 600);
+    });
   });
 
-  overlay.querySelector('[data-action="new-week"]').addEventListener('click', () => {
-    overlay.style.opacity = '0';
-    setTimeout(() => {
-      overlay.remove();
-      resetAll();
-    }, 600);
-  });
+  const newWeekBtn = overlay.querySelector('[data-action="new-week"]');
+  if (newWeekBtn) {
+    newWeekBtn.addEventListener('click', () => {
+      overlay.style.opacity = '0';
+      setTimeout(() => {
+        overlay.remove();
+        resetAll();
+      }, 600);
+    });
+  }
 }
 
 // ============== Idle Mode ==============
@@ -684,4 +779,133 @@ function setupCrossTabSync() {
       } catch (err) {}
     }
   });
+}
+
+// ============== FRASES MOTIVACIONALES ROTATIVAS ==============
+const PHRASES_ACTIVE = [
+  "Cierra como si tu bono dependiera de eso · Spoiler: depende",
+  "El que no vende no come · Vamos",
+  "Sales mode: ON",
+  "Ofrece, sonríe y vende",
+  "Cada NO te acerca a un SÍ",
+  "Tu meta no se va a alcanzar sola",
+  "Dale más fuego al WhatsApp",
+  "El cliente está esperando · No lo dejes solo",
+  "Hoy es el día de cerrar",
+  "Que tu próximo cliente sienta el fuego"
+];
+
+const PHRASES_IDLE = [
+  "El silencio del teléfono no se llena solo",
+  "Una llamada vale por mil mensajes",
+  "Hay metas que no se rompen solas",
+  "Vamos · Que la racha empieza con un click",
+  "Recuerda: el primer NO es solo el inicio"
+];
+
+const PHRASES_AFTER_SALE = [
+  "¡Ese lleva carrera!",
+  "¡Otra más para la cuenta!",
+  "¡Imparable!",
+  "¡Que llueva!",
+  "¡Así se cierra!",
+  "¡Esto está prendiendo!",
+  "¡Más madera!"
+];
+
+const PHRASES_NEW_LEADER = [
+  "El trono cambió de dueño",
+  "Nuevo líder en la pista",
+  "Toma el liderazgo · Defiéndelo",
+  "El que mucho vende, lidera"
+];
+
+let phraseEl = null;
+let phraseTimer = null;
+
+function setPhrase(text) {
+  if (!phraseEl) return;
+  phraseEl.style.animation = 'none';
+  void phraseEl.offsetWidth;
+  phraseEl.textContent = text;
+  phraseEl.style.animation = '';
+}
+
+function startPhraseRotator() {
+  phraseEl = document.getElementById('phraseRotator');
+  if (!phraseEl) return;
+
+  function pickAndShow() {
+    const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+    const lastTs = state.history.length ? state.history[state.history.length - 1].ts : 0;
+    const isIdle = total === 0 || (Date.now() - lastTs > 60000);
+    const pool = isIdle ? PHRASES_IDLE : PHRASES_ACTIVE;
+    const phrase = pool[Math.floor(Math.random() * pool.length)];
+    setPhrase(phrase);
+  }
+
+  pickAndShow();
+  if (phraseTimer) clearInterval(phraseTimer);
+  phraseTimer = setInterval(pickAndShow, 9000);
+}
+
+// Frase contextual al recibir venta (sobreescribe temporalmente)
+function showContextPhrase(pool, ms = 5000) {
+  if (!phraseEl) return;
+  const phrase = pool[Math.floor(Math.random() * pool.length)];
+  setPhrase(phrase);
+  setTimeout(() => {
+    if (typeof startPhraseRotator === 'function') startPhraseRotator();
+  }, ms);
+}
+
+// ============== STREAK POP ==============
+function showStreakPop(seller, salesCount) {
+  // Quitar otros pops antes
+  document.querySelectorAll('.streak-pop').forEach(el => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 400);
+  });
+
+  const el = document.createElement('div');
+  el.className = 'streak-pop';
+  el.style.cssText = `--accent: ${seller.color};`;
+
+  const phrase = PHRASES_AFTER_SALE[Math.floor(Math.random() * PHRASES_AFTER_SALE.length)];
+
+  el.innerHTML = `
+    <div class="streak-pop-avatar">${avatarSVG(seller.avatar, seller.color, seller.colorAlt, 48)}</div>
+    <div class="streak-pop-text">
+      <div class="streak-pop-msg">${phrase}</div>
+      <div class="streak-pop-detail">${seller.name} · venta #${salesCount}</div>
+    </div>
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 400);
+  }, 4000);
+}
+
+// ============== STATS PARA FOOTER ==============
+function getTopSeller() {
+  const ranked = getRanked();
+  return ranked[0]?.total > 0 ? ranked[0] : null;
+}
+
+function getCurrentStreak() {
+  // Racha actual: cuántas ventas seguidas lleva el último que vendió
+  const hist = state.history || [];
+  if (!hist.length) return null;
+  const lastId = hist[hist.length - 1].sellerId;
+  let count = 0;
+  for (let i = hist.length - 1; i >= 0; i--) {
+    if (hist[i].sellerId === lastId) count++;
+    else break;
+  }
+  return { sellerId: lastId, count };
+}
+
+function getBestStreakOfWeek() {
+  return computeBestStreak();
 }
