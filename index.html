@@ -1,0 +1,468 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SALES ARENA — TEC CAPITAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<link rel="stylesheet" href="./shared.css" />
+<style>
+/* ============== Layout específico de Arena ============== */
+.lb-wrap { padding: 20px 28px 24px; }
+
+.lb-header {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 24px; margin-bottom: 20px;
+  position: relative; z-index: 4;
+}
+
+.hud-stat .label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.3em; color: rgba(255,255,255,0.5); margin-bottom: 6px;
+}
+.hud-stat .value {
+  font-family: var(--font-display); font-size: 28px; font-weight: 900; line-height: 1;
+}
+.hud-stat.right { text-align: right; }
+.hud-stat .value.mono { font-family: var(--font-mono); }
+
+.title-block { text-align: center; }
+.title-tag {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.5em; color: rgba(180,124,255,0.8); margin-bottom: 4px;
+}
+.title-main {
+  font-size: clamp(32px, 4.5vw, 54px);
+  background: linear-gradient(90deg, #FFD93D 0%, #FF8C42 25%, #FF4FB6 50%, #B47CFF 75%, #6BC9FF 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.08em; line-height: 1;
+  animation: shimmer 6s linear infinite;
+  filter: drop-shadow(0 0 30px rgba(180,124,255,0.6));
+}
+.title-sub {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 12px;
+  color: rgba(255,255,255,0.6); letter-spacing: 0.3em;
+}
+.live-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 999px;
+  background: #FF4FB6; box-shadow: 0 0 10px #FF4FB6;
+  animation: blink-led 1.4s infinite ease-in-out;
+}
+
+/* ============== PODIO ============== */
+.podium-wrap {
+  max-width: 1320px; margin: 0 auto;
+  position: relative; z-index: 3;
+}
+
+.podium {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  align-items: end;
+  height: clamp(500px, 72vh, 720px);
+  padding: 0 6px;
+}
+
+/* ==============================================================
+   PILLAR — la barra ahora es prácticamente todo el contenedor
+   ============================================================== */
+.pillar {
+  position: relative;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, rgba(20,8,40,0.5) 0%, rgba(10,1,24,0.85) 100%);
+  border: 2px solid var(--accent-40, rgba(180,124,255,0.4));
+  border-radius: 18px 18px 12px 12px;
+  padding: 14px 12px 10px;
+  overflow: hidden;
+  box-shadow: 0 0 30px var(--accent-15, rgba(180,124,255,0.2)),
+              inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: all 0.5s cubic-bezier(.5, 1.5, .5, 1);
+}
+
+.pillar.rank-0 { height: 100%; }
+.pillar.rank-1 { height: 92%; }
+.pillar.rank-2 { height: 84%; }
+.pillar.rank-3 { height: 76%; }
+
+.pillar.glow { animation: climb-flash 0.9s ease; }
+
+.pillar.goal-reached {
+  border-color: #FFD93D !important;
+  animation: goal-reached-pulse 2s infinite ease-in-out;
+}
+
+.pillar.rank-0::before {
+  content: '';
+  position: absolute; top: -2px; left: -2px; right: -2px; height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+  border-radius: 18px 18px 0 0;
+  z-index: 5;
+}
+
+/* HEADER del pillar: rank + medalla */
+.pillar-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px; flex-shrink: 0;
+  position: relative; z-index: 5;
+}
+.pillar-rank {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 24px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-alt));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px var(--accent));
+  line-height: 1;
+}
+.pillar.rank-0 .pillar-rank { font-size: 32px; }
+.pillar-medal {
+  font-size: 18px; filter: drop-shadow(0 0 6px var(--accent));
+}
+.pillar.rank-0 .pillar-medal { font-size: 22px; }
+
+.pillar-avatar {
+  display: flex; align-items: center; justify-content: center;
+  margin: 2px 0 6px;
+  filter: drop-shadow(0 0 12px var(--accent)) drop-shadow(0 0 24px var(--accent-55, rgba(180,124,255,0.55)));
+  animation: float-y 3.2s infinite ease-in-out;
+  transform-origin: center;
+  transform-style: preserve-3d;
+  flex-shrink: 0;
+  position: relative; z-index: 5;
+}
+.pillar-avatar.spin {
+  animation: spin-reveal 0.9s cubic-bezier(.4, 0, .2, 1), float-y 3.2s 0.9s infinite ease-in-out;
+}
+.pillar-avatar.bounce {
+  animation: bounce-pop 0.55s cubic-bezier(.5, 1.5, .5, 1), float-y 3.2s 0.55s infinite ease-in-out;
+}
+.pillar.rank-0 .pillar-avatar {
+  animation: float-y 3.2s infinite ease-in-out, wobble 4s 1s infinite ease-in-out;
+}
+
+.pillar-name {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 15px;
+  color: #fff;
+  text-shadow: 0 0 12px var(--accent);
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  position: relative; z-index: 5;
+  flex-shrink: 0;
+}
+.pillar.rank-0 .pillar-name { font-size: 19px; }
+
+.pillar-tag {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--accent); letter-spacing: 0.2em;
+  text-align: center; opacity: 0.85; margin-bottom: 6px;
+  position: relative; z-index: 5;
+  flex-shrink: 0;
+}
+.pillar.rank-0 .pillar-tag { font-size: 10px; }
+
+/* Desglose por consultora (chips) */
+.pillar-pages {
+  display: flex; flex-wrap: wrap; gap: 4px;
+  justify-content: center; margin-bottom: 8px;
+  position: relative; z-index: 5;
+  flex-shrink: 0; min-height: 22px;
+}
+.pillar-pages-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px;
+  background: rgba(0,0,0,0.5);
+  border: 1px solid var(--accent-50, rgba(180,124,255,0.5));
+  border-radius: 999px;
+  font-family: var(--font-mono); font-size: 9px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.pillar-pages-chip strong {
+  color: var(--accent); font-weight: 900;
+  font-family: var(--font-display); font-size: 11px;
+}
+.pillar.rank-0 .pillar-pages-chip { font-size: 10px; padding: 3px 9px; }
+.pillar.rank-0 .pillar-pages-chip strong { font-size: 12px; }
+
+/* ============== BARRA VERTICAL — toma todo el espacio restante ============== */
+.bar-v {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  background: rgba(0,0,0,0.55);
+  border-radius: 10px;
+  border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
+  overflow: hidden;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+  min-height: 240px;
+}
+.bar-v-fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, var(--accent-alt) 0%, var(--accent) 50%, var(--accent-alt) 100%);
+  background-size: 100% 200%;
+  animation: shimmer 2.5s linear infinite, bar-glow-pulse 2s infinite ease-in-out;
+  border-radius: 10px;
+  transition: height 1s cubic-bezier(.34, 1.56, .64, 1);
+  height: 0%;
+}
+.bar-v-fill::before {
+  content: ''; position: absolute; left: 2px; top: 0; bottom: 0; width: 30%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.4), transparent);
+  border-radius: 10px;
+  pointer-events: none;
+}
+.bar-v-fill::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 0 12px #fff;
+  border-radius: 10px 10px 0 0;
+}
+.bar-v-ticks {
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(0deg,
+    transparent 0, transparent 22px,
+    rgba(255,255,255,0.06) 22px, rgba(255,255,255,0.06) 24px);
+  pointer-events: none;
+}
+
+/* Marca de meta semanal (línea horizontal en el "tope") */
+.bar-v-target {
+  position: absolute; left: -2px; right: -2px; top: 0;
+  height: 2px;
+  background: rgba(255, 217, 61, 0.5);
+  pointer-events: none;
+  z-index: 2;
+}
+.bar-v-target::after {
+  content: 'META';
+  position: absolute; right: 4px; top: -16px;
+  font-family: var(--font-mono); font-size: 9px;
+  color: rgba(255, 217, 61, 0.7); letter-spacing: 0.2em;
+}
+
+/* Número grande arriba de la barra */
+.bar-v-num {
+  position: absolute; left: 0; right: 0; top: 8px;
+  text-align: center;
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 26px; color: #fff;
+  text-shadow: 0 0 10px var(--accent), 0 2px 4px rgba(0,0,0,0.9);
+  letter-spacing: 0.04em;
+  z-index: 3; pointer-events: none;
+  transition: transform 0.3s;
+}
+.pillar.rank-0 .bar-v-num { font-size: 36px; }
+.bar-v-num.bump { animation: bounce-pop 0.5s ease; }
+
+/* Sparks */
+.bar-v-sparks { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.spark {
+  position: absolute;
+  width: 4px; height: 4px; border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent);
+  animation: spark-rise 1.6s ease-out forwards;
+}
+
+/* Climb badge */
+.climb-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+  color: #0a0118; padding: 3px 8px; border-radius: 999px;
+  font-family: var(--font-display); font-size: 9px; font-weight: 900;
+  letter-spacing: 0.1em; box-shadow: 0 0 16px var(--accent);
+  animation: pop-in 0.4s ease;
+  z-index: 6;
+}
+
+/* Bench */
+.bench {
+  margin-top: 14px; padding: 10px 14px;
+  background: rgba(20,8,40,0.4);
+  border: 1px dashed rgba(180,124,255,0.25);
+  border-radius: 12px; display: flex;
+  align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.bench-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.3em; color: rgba(255,255,255,0.45);
+}
+.bench-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px;
+  background: var(--accent-15, rgba(180,124,255,0.15));
+  border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
+  border-radius: 999px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+}
+.bench-chip-rank { color: var(--accent); }
+.bench-chip-num { color: var(--accent); font-weight: 900; }
+
+/* Mobile */
+@media (max-width: 900px) {
+  .lb-wrap { padding: 12px 8px 24px; }
+  .lb-header { grid-template-columns: 1fr; gap: 10px; text-align: center; }
+  .hud-stat.right { text-align: center; }
+  .podium { gap: 8px; height: clamp(420px, 70vh, 560px); padding: 0 4px; }
+  .pillar { padding: 10px 6px 8px; }
+  .pillar-rank { font-size: 18px; }
+  .pillar.rank-0 .pillar-rank { font-size: 24px; }
+  .pillar-name { font-size: 11px; }
+  .pillar.rank-0 .pillar-name { font-size: 13px; }
+  .pillar-tag { font-size: 7px; letter-spacing: 0.12em; }
+  .pillar-pages-chip { font-size: 8px; padding: 1px 6px; }
+  .bar-v-num { font-size: 16px; top: 4px; }
+  .pillar.rank-0 .bar-v-num { font-size: 22px; }
+  .bench-chip { font-size: 10px; padding: 2px 8px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div id="view-leaderboard">
+  <div class="lb-wrap">
+    <header class="lb-header">
+      <div class="hud-stat">
+        <div class="label">▸ VENTAS DE LA SEMANA</div>
+        <div class="value" id="totalSales" style="color: #5EEAD4; text-shadow: 0 0 20px #5EEAD4;">0</div>
+      </div>
+      <div class="title-block">
+        <div class="title-tag">TEC CAPITAL × IPCI</div>
+        <h1 class="title-main">SALES ARENA</h1>
+        <div class="title-sub"><span class="live-dot"></span>EN VIVO · TOP 4 · META <span id="weekTargetSpan">85</span></div>
+      </div>
+      <div class="hud-stat right">
+        <div class="label">▸ HORA</div>
+        <div class="value mono" id="clock" style="color: #FFD93D; text-shadow: 0 0 20px #FFD93D;">--:--:--</div>
+      </div>
+    </header>
+
+    <div class="podium-wrap">
+      <div class="podium" id="podium"></div>
+      <div id="benchHost"></div>
+    </div>
+  </div>
+</div>
+
+<script src="./shared.js"></script>
+<script>
+// ============== Render Podium ==============
+function renderLeaderboard() {
+  const ranked = getRanked();
+  const top4 = ranked.slice(0, 4);
+  const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+  document.getElementById('totalSales').textContent = total;
+
+  const podium = document.getElementById('podium');
+  podium.innerHTML = '';
+
+  top4.forEach((s, i) => {
+    const pct = Math.min(100, (s.total / WEEK_TARGET) * 100);
+    const isFirst = i === 0;
+    const goalReached = s.total >= WEEK_TARGET;
+    const accentVars = `--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-15: ${s.color}26; --accent-30: ${s.color}4d; --accent-40: ${s.color}66; --accent-50: ${s.color}80; --accent-55: ${s.color}8c; --accent-80: ${s.color}cc;`;
+    const isLeader = isFirst && s.total > 0;
+
+    // Páginas con desglose si tiene 2+
+    let pagesHtml = '';
+    if (s.pages.length >= 2) {
+      const breakdown = getPageBreakdown(s);
+      pagesHtml = `<div class="pillar-pages">${breakdown.map(b => `
+        <div class="pillar-pages-chip">${b.page} <strong>${b.count}</strong></div>
+      `).join('')}</div>`;
+    } else {
+      pagesHtml = `<div class="pillar-pages"></div>`;
+    }
+
+    const el = document.createElement('div');
+    el.className = `pillar rank-${i}` + (goalReached ? ' goal-reached' : '');
+    el.dataset.sellerId = s.id;
+    el.style.cssText = accentVars;
+
+    el.innerHTML = `
+      <span class="hud-corner tl"></span>
+      <span class="hud-corner tr"></span>
+      <span class="hud-corner bl"></span>
+      <span class="hud-corner br"></span>
+
+      <div class="pillar-head">
+        <div class="pillar-rank">#${i + 1}</div>
+        <div class="pillar-medal">${RANK_MEDALS[i]}${goalReached ? ' 🎯' : ''}</div>
+      </div>
+
+      <div class="pillar-avatar" data-avatar>
+        ${avatarSVG(s.avatar, s.color, s.colorAlt, isFirst ? 100 : 78)}
+      </div>
+
+      <div class="pillar-name">${s.name}</div>
+      <div class="pillar-tag">[ ${RANK_LABELS[i]} ]${isLeader ? ' ◆ LEADER' : ''}</div>
+
+      ${pagesHtml}
+
+      <div class="bar-v">
+        <div class="bar-v-num">${s.total}</div>
+        <div class="bar-v-fill" style="height: ${pct}%"></div>
+        <div class="bar-v-ticks"></div>
+        <div class="bar-v-sparks"></div>
+      </div>
+    `;
+    podium.appendChild(el);
+  });
+
+  // Bench
+  const benchHost = document.getElementById('benchHost');
+  if (ranked.length > 4) {
+    benchHost.innerHTML = `
+      <div class="bench">
+        <div class="bench-label">▾ BANCA</div>
+        ${ranked.slice(4).map((s, i) => `
+          <div class="bench-chip" style="--accent: ${s.color}; --accent-15: ${s.color}30; --accent-40: ${s.color}66;">
+            <span class="bench-chip-rank">#${i + 5}</span>
+            ${s.name}
+            <span class="bench-chip-num">${s.total}</span>
+          </div>`).join('')}
+      </div>`;
+  } else {
+    benchHost.innerHTML = '';
+  }
+}
+
+function renderAll() {
+  renderLeaderboard();
+  resetIdleTimer();
+}
+
+// ============== Reloj ==============
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ============== Init ==============
+document.getElementById('weekTargetSpan').textContent = WEEK_TARGET;
+prevTopIds = getRanked().slice(0, 4).map(r => r.id);
+prevLeader = getRanked()[0]?.id;
+initParticles();
+setupCrossTabSync();
+renderAll();
+</script>
+
+</body>
+</html>
