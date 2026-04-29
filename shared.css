@@ -214,13 +214,14 @@ button {
 }
 
 /* ========================================================
-   CEREMONIA DE CIERRE DE SEMANA — PODIO 3D ÉPICO
+   CEREMONIA DE CIERRE DE SEMANA — VERSIÓN ÉPICA
+   Avatares volando, light beam, corona descendente, baile
    ======================================================== */
 .ceremony-overlay {
   position: fixed; inset: 0; z-index: 200;
   background:
-    radial-gradient(ellipse at center top, rgba(255,217,61,0.18) 0%, transparent 50%),
-    radial-gradient(ellipse at center, rgba(255,140,66,0.12) 0%, transparent 60%),
+    radial-gradient(ellipse at center top, rgba(255,217,61,0.20) 0%, transparent 60%),
+    radial-gradient(ellipse at center bottom, rgba(255,79,182,0.10) 0%, transparent 50%),
     rgba(5, 0, 12, 0.97);
   backdrop-filter: blur(14px);
   display: flex; flex-direction: column;
@@ -241,15 +242,33 @@ button {
   pointer-events: none;
   background:
     conic-gradient(from 0deg,
-      transparent 0deg, rgba(255,217,61,0.06) 10deg, transparent 20deg,
-      transparent 60deg, rgba(255,140,66,0.06) 70deg, transparent 80deg,
-      transparent 120deg, rgba(255,79,182,0.05) 130deg, transparent 140deg,
-      transparent 180deg, rgba(180,124,255,0.06) 190deg, transparent 200deg,
-      transparent 240deg, rgba(255,217,61,0.06) 250deg, transparent 260deg,
-      transparent 300deg, rgba(255,140,66,0.05) 310deg, transparent 320deg,
+      transparent 0deg, rgba(255,217,61,0.10) 10deg, transparent 20deg,
+      transparent 60deg, rgba(255,140,66,0.10) 70deg, transparent 80deg,
+      transparent 120deg, rgba(255,79,182,0.07) 130deg, transparent 140deg,
+      transparent 180deg, rgba(180,124,255,0.10) 190deg, transparent 200deg,
+      transparent 240deg, rgba(255,217,61,0.10) 250deg, transparent 260deg,
+      transparent 300deg, rgba(255,140,66,0.07) 310deg, transparent 320deg,
       transparent 360deg);
-  animation: ray-rotate 60s linear infinite;
+  animation: ray-rotate 30s linear infinite;
   transform: translate(-50%, -50%);
+}
+
+/* Estrellas brillantes flotando */
+.ceremony-stars {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255,217,61,0.7) 1px, transparent 2px),
+    radial-gradient(circle, rgba(255,255,255,0.5) 1px, transparent 2px),
+    radial-gradient(circle, rgba(94,234,212,0.4) 1px, transparent 2px);
+  background-size: 200px 200px, 280px 280px, 360px 360px;
+  background-position: 0 0, 50px 50px, 100px 30px;
+  animation: stars-twinkle 6s linear infinite;
+  opacity: 0.4;
+}
+@keyframes stars-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.6; }
 }
 
 /* Header de la ceremonia */
@@ -263,7 +282,15 @@ button {
   letter-spacing: 0.06em;
   background: linear-gradient(180deg, #FFD93D 0%, #FF8C42 100%);
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  animation: title-glow 2s infinite ease-in-out;
+  filter: drop-shadow(0 0 30px #FFD93D);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.6s, transform 0.8s cubic-bezier(.34, 1.56, .64, 1);
+}
+.ceremony-title.appear {
+  opacity: 1;
+  transform: scale(1);
+  animation: title-glow 2s 0.8s infinite ease-in-out;
 }
 .ceremony-title .trophy {
   font-size: 0.8em;
@@ -280,52 +307,180 @@ button {
   align-items: end;
   gap: clamp(8px, 1.5vw, 24px);
   width: 100%;
-  max-width: 800px;
+  max-width: 900px;
   margin-bottom: 32px;
-  perspective: 1200px;
+  perspective: 1500px;
+  min-height: 320px;
 }
 
+/* === SPOT (cada lugar del podio) === */
 .podium-spot {
   position: relative;
   display: flex; flex-direction: column;
   align-items: center;
-  animation: podium-rise 0.8s cubic-bezier(.34, 1.56, .64, 1) forwards;
-  opacity: 0;
 }
-.podium-spot.first  { animation-delay: 1.2s; }
-.podium-spot.second { animation-delay: 0.6s; }
-.podium-spot.third  { animation-delay: 0.9s; }
+
+/* Estado: pre-fly (oculto antes de aparecer) */
+.podium-spot.pre-fly {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Estado: flying-in (vuela desde un lado) */
+.podium-spot.third.flying-in {
+  animation: fly-in-left 1.4s cubic-bezier(.4, 1.5, .5, 1) forwards;
+}
+.podium-spot.second.flying-in {
+  animation: fly-in-right 1.4s cubic-bezier(.4, 1.5, .5, 1) forwards;
+}
+
+/* Estado: descending (el #1 baja del cielo) */
+.podium-spot.first.descending-from-sky {
+  animation: descend-from-sky 1.6s cubic-bezier(.5, 0, .3, 1) forwards;
+}
+
+/* Estado: landed (después de aterrizar) */
+.podium-spot.landed {
+  opacity: 1;
+  transform: none;
+}
+
+@keyframes fly-in-left {
+  0%   { opacity: 0; transform: translate(-100vw, -100px) rotate(-360deg) scale(0.4); }
+  60%  { opacity: 1; transform: translate(20px, -30px) rotate(15deg) scale(1.15); }
+  80%  { transform: translate(-8px, 10px) rotate(-5deg) scale(0.95); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes fly-in-right {
+  0%   { opacity: 0; transform: translate(100vw, -120px) rotate(360deg) scale(0.4); }
+  60%  { opacity: 1; transform: translate(-20px, -30px) rotate(-15deg) scale(1.15); }
+  80%  { transform: translate(8px, 10px) rotate(5deg) scale(0.95); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes descend-from-sky {
+  0%   { opacity: 0; transform: translateY(-100vh) scale(0.3) rotate(720deg); }
+  50%  { opacity: 1; transform: translateY(-40px) scale(1.2) rotate(180deg); }
+  75%  { transform: translateY(15px) scale(0.95) rotate(0deg); }
+  100% { opacity: 1; transform: none; }
+}
+
+/* Light beam para el #1 (haz de luz divino) */
+.podium-light-beam {
+  position: absolute;
+  top: -100vh; left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 100vh;
+  background: linear-gradient(180deg,
+    transparent 0%,
+    rgba(255,217,61,0.05) 20%,
+    rgba(255,217,61,0.4) 70%,
+    rgba(255,217,61,0.7) 95%,
+    rgba(255,255,255,0.9) 100%);
+  filter: blur(20px);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.podium-light-beam.active {
+  animation: beam-appear 0.8s ease forwards, beam-pulse 1.5s 0.8s infinite ease-in-out;
+}
+@keyframes beam-appear {
+  0%   { opacity: 0; transform: translateX(-50%) scaleX(0.3); }
+  100% { opacity: 1; transform: translateX(-50%) scaleX(1); }
+}
+@keyframes beam-pulse {
+  0%, 100% { opacity: 0.7; filter: blur(20px); }
+  50% { opacity: 1; filter: blur(15px); }
+}
 
 /* Avatar del podio */
 .podium-avatar {
-  filter: drop-shadow(0 0 24px var(--accent)) drop-shadow(0 0 48px var(--accent));
+  filter: drop-shadow(0 0 24px var(--accent)) drop-shadow(0 0 48px var(--accent-55, rgba(180,124,255,0.55)));
   margin-bottom: 12px;
   position: relative;
+  z-index: 4;
+  transition: transform 0.5s;
 }
-.podium-spot.first .podium-avatar {
-  animation: dance-strong 1.6s infinite ease-in-out;
+
+/* Avatares celebrando (después de aterrizar) */
+.podium-avatar.celebrating {
+  animation: dance 1.6s infinite ease-in-out;
 }
-.podium-spot.second .podium-avatar {
-  animation: dance 2s infinite ease-in-out;
+.podium-avatar.celebrating-strong {
+  animation: dance-strong 1.4s infinite ease-in-out;
 }
-.podium-spot.third .podium-avatar {
-  animation: dance 2.2s 0.3s infinite ease-in-out;
+
+/* Trail de partículas durante el vuelo */
+.podium-trail {
+  position: absolute;
+  top: 30%; left: 50%;
+  width: 6px; height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
+  pointer-events: none;
+  opacity: 0;
+  z-index: 1;
+}
+.podium-spot.flying-in .podium-trail,
+.podium-spot.descending-from-sky .podium-trail {
+  opacity: 1;
+  box-shadow:
+    -20px 0 8px var(--accent),
+    -40px 5px 6px var(--accent),
+    -60px 8px 4px var(--accent),
+    -80px 12px 3px var(--accent),
+    -100px 15px 2px var(--accent);
+  animation: trail-fade 1.4s ease;
+}
+.podium-spot.second.flying-in .podium-trail {
+  box-shadow:
+    20px 0 8px var(--accent),
+    40px 5px 6px var(--accent),
+    60px 8px 4px var(--accent),
+    80px 12px 3px var(--accent),
+    100px 15px 2px var(--accent);
+}
+.podium-spot.first.descending-from-sky .podium-trail {
+  box-shadow:
+    0 -20px 8px #FFD93D,
+    0 -40px 6px #FFD93D,
+    0 -60px 4px #FFD93D,
+    0 -80px 3px #FFD93D;
+}
+@keyframes trail-fade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 /* Corona sobre el #1 */
 .podium-crown {
   position: absolute;
-  bottom: 100%;
+  top: -100px;
   left: 50%;
   transform: translateX(-50%);
   font-size: clamp(40px, 5vw, 72px);
   filter: drop-shadow(0 0 20px #FFD93D) drop-shadow(0 0 40px #FF8C42);
-  animation: crown-spin 1.6s infinite ease-in-out;
-  margin-bottom: 8px;
   z-index: 10;
+  opacity: 0;
+}
+.podium-crown[data-state="hidden"] { opacity: 0; }
+.podium-crown[data-state="descending"] {
+  animation: crown-descend 1s cubic-bezier(.5, 1.5, .5, 1) forwards;
+}
+.podium-crown[data-state="placed"] {
+  opacity: 1;
+  top: -50px;
+  animation: crown-spin 1.6s infinite ease-in-out;
+}
+@keyframes crown-descend {
+  0%   { opacity: 0; top: -100vh; transform: translateX(-50%) rotate(-180deg) scale(0.3); }
+  60%  { opacity: 1; top: -70px; transform: translateX(-50%) rotate(20deg) scale(1.3); }
+  85%  { top: -45px; transform: translateX(-50%) rotate(-5deg) scale(0.95); }
+  100% { opacity: 1; top: -50px; transform: translateX(-50%) rotate(0deg) scale(1); }
 }
 
-/* Nombre del vendedor en el podio */
+/* Nombre */
 .podium-name {
   font-family: var(--font-display);
   font-weight: 900;
@@ -350,14 +505,15 @@ button {
 .podium-sales {
   font-family: var(--font-display);
   font-weight: 900;
-  font-size: clamp(14px, 1.4vw, 18px);
+  font-size: clamp(15px, 1.5vw, 20px);
   color: var(--accent);
   text-shadow: 0 0 20px var(--accent);
   letter-spacing: 0.1em;
   margin-bottom: 12px;
-  animation: count-pop 0.6s ease forwards;
-  animation-delay: inherit;
-  opacity: 0;
+}
+.podium-sales .count-up {
+  font-size: 1.4em;
+  font-weight: 900;
 }
 
 /* Bloque del podio (3D effect) */
@@ -406,19 +562,19 @@ button {
 }
 
 .podium-spot.first .podium-block {
-  height: clamp(160px, 22vh, 220px);
+  height: clamp(180px, 24vh, 240px);
   background: linear-gradient(180deg, #FFD93D 0%, #FF8C42 70%, #c46a1f 100%);
   --accent: #FFD93D;
   --accent-alt: #FF8C42;
 }
 .podium-spot.second .podium-block {
-  height: clamp(120px, 17vh, 170px);
+  height: clamp(130px, 18vh, 180px);
   background: linear-gradient(180deg, #E8E8E8 0%, #B0B0B0 70%, #707070 100%);
   --accent: #C0C0C0;
   --accent-alt: #888;
 }
 .podium-spot.third .podium-block {
-  height: clamp(90px, 13vh, 130px);
+  height: clamp(100px, 14vh, 140px);
   background: linear-gradient(180deg, #E8A05A 0%, #CD7F32 70%, #8B4513 100%);
   --accent: #CD7F32;
   --accent-alt: #8B4513;
@@ -436,8 +592,12 @@ button {
   text-align: center;
   margin-bottom: 24px;
   opacity: 0;
-  animation: pop-in 0.6s ease forwards;
-  animation-delay: 2s;
+  transform: translateY(20px);
+  transition: opacity 0.6s, transform 0.6s;
+}
+.ceremony-message.appear {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Stats extras */
@@ -449,8 +609,12 @@ button {
   flex-wrap: wrap;
   justify-content: center;
   opacity: 0;
-  animation: pop-in 0.6s ease forwards;
-  animation-delay: 1.8s;
+  transform: translateY(20px);
+  transition: opacity 0.6s, transform 0.6s;
+}
+.ceremony-extras.appear {
+  opacity: 1;
+  transform: translateY(0);
 }
 .ceremony-extra {
   background: rgba(20,8,40,0.6);
@@ -474,9 +638,13 @@ button {
   display: flex; gap: 12px;
   position: relative; z-index: 5;
   opacity: 0;
-  animation: pop-in 0.4s ease forwards;
-  animation-delay: 2.4s;
+  transform: translateY(20px);
+  transition: opacity 0.6s, transform 0.6s;
   flex-wrap: wrap; justify-content: center;
+}
+.ceremony-actions.appear {
+  opacity: 1;
+  transform: translateY(0);
 }
 .ceremony-actions button {
   padding: 12px 24px; border-radius: 10px;

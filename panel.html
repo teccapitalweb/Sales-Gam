@@ -388,13 +388,34 @@ btnReveal.addEventListener('click', () => {
   const alreadyRolledToday = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
 
   if (alreadyRolledToday) {
-    if (!confirm(
-      `Ya se reveló la comisión de HOY: $${state.commission.todayAmount} MXN${state.commission.todayPremium ? ' ★ PREMIUM' : ''}.\n\n` +
-      `Si pulsas OK volveré a mostrar la animación a los vendedores con el mismo monto.\n\n` +
-      `(Las comisiones acumuladas de cada vendedor NO se pierden — siguen sumándose.)`
-    )) {
-      return;
+    // Ofrecer dos opciones: repetir animación con mismo monto, o re-rolear nuevo
+    const choice = prompt(
+      `Ya se reveló la comisión de HOY: $${state.commission.todayAmount} MXN${state.commission.todayPremium ? ' ★ PREMIUM' : ''}\n\n` +
+      `Escribe el número de la opción:\n\n` +
+      `  1 = Repetir la animación con el MISMO monto\n` +
+      `  2 = ROLEAR un monto NUEVO para hoy\n` +
+      `  (Cualquier otra cosa = Cancelar)\n\n` +
+      `Las comisiones acumuladas de cada vendedor NO se pierden.`
+    );
+
+    if (choice === '1') {
+      triggerCommissionReveal();
+      renderAll();
+    } else if (choice === '2') {
+      // Forzar re-roll: limpiar el todayAmount para que rolle uno nuevo
+      // Si el actual era premium, devolvemos esa premium al pool del mes
+      if (state.commission.todayPremium && state.commission.premiumUsedThisMonth > 0) {
+        state.commission.premiumUsedThisMonth -= 1;
+      }
+      state.commission.todayDate = null;
+      state.commission.todayAmount = null;
+      state.commission.todayPremium = false;
+      saveState();
+      triggerCommissionReveal();
+      renderAll();
     }
+    // Cualquier otra cosa = cancelar, no hacer nada
+    return;
   }
 
   triggerCommissionReveal();

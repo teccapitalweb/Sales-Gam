@@ -33,7 +33,17 @@ let prevLeader = null;
 function buildInitialState() {
   const sellers = {}, pages = {};
   SELLERS.forEach(s => { sellers[s.id] = 0; s.pages.forEach(p => { pages[p] = 0; }); });
-  return { sellers, pages, history: [], weekStarted: Date.now() };
+  return {
+    sellers, pages, history: [], weekStarted: Date.now(),
+    commission: {
+      todayDate: null,
+      todayAmount: null,
+      todayPremium: false,
+      month: null,
+      premiumUsedThisMonth: 0,
+      earned: {}
+    }
+  };
 }
 
 function loadState() {
@@ -43,6 +53,13 @@ function loadState() {
     const p = JSON.parse(raw);
     if (!p.sellers || !p.pages) return buildInitialState();
     if (!p.weekStarted) p.weekStarted = Date.now();
+    // Asegurar que commission siempre exista
+    if (!p.commission) {
+      p.commission = {
+        todayDate: null, todayAmount: null, todayPremium: false,
+        month: null, premiumUsedThisMonth: 0, earned: {}
+      };
+    }
     return p;
   } catch (e) { return buildInitialState(); }
 }
@@ -116,11 +133,27 @@ function undoLastSale() {
 }
 
 function resetAll() {
+  // Preservar el contador de premium del mes actual (es por mes, no por semana)
+  const prevMonth = state?.commission?.month || null;
+  const prevPremiumUsed = state?.commission?.premiumUsedThisMonth || 0;
+
   state = buildInitialState();
+
+  // Si seguimos en el mismo mes, conservamos el contador para que no se "reseteen" las premium ya usadas
+  const nowMonth = (function() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  })();
+  if (prevMonth && prevMonth === nowMonth) {
+    state.commission.month = prevMonth;
+    state.commission.premiumUsedThisMonth = prevPremiumUsed;
+  }
+
   prevTopIds = [];
   prevLeader = null;
   saveState();
   if (typeof renderAll === 'function') renderAll();
+  if (typeof updateRevealBtn === 'function') updateRevealBtn();
 }
 
 // ============== Avatar SVG ==============
@@ -530,10 +563,13 @@ function computeBestStreak() {
 }
 
 function showCeremony(data) {
+  // Limpiar ceremonia anterior
+  document.querySelectorAll('.ceremony-overlay').forEach(el => el.remove());
+
   const overlay = document.createElement('div');
   overlay.className = 'ceremony-overlay';
 
-  // Backwards compat: si vienen datos viejos con un solo ganador
+  // Top 3 (compatibilidad con datos viejos)
   const top3 = data.top3 || [{
     sellerId: data.sellerId, name: data.name, avatar: data.avatar,
     color: data.color, colorAlt: data.colorAlt, total: data.total,
@@ -558,27 +594,27 @@ function showCeremony(data) {
       <div class="ceremony-extra-value">${data.totalWeek} ventas</div>
     </div>` : '';
 
-  const winnerPagesText = winner.pages && winner.pages.length > 1
-    ? `Mejor: ${winner.bestPage} (${winner.bestPageCount})`
-    : (winner.bestPage || winner.pages?.[0] || '');
-
-  function spotHtml(seller, place) {
-    if (!seller) return '<div class="podium-spot"></div>';
+  function spotMarkup(seller, place) {
+    if (!seller) return '';
     const pageText = seller.pages && seller.pages.length > 1
       ? `${seller.bestPage} · ${seller.bestPageCount} ventas`
       : (seller.bestPage || seller.pages?.[0] || '');
-    const crownHtml = place === 'first' ? '<div class="podium-crown">👑</div>' : '';
     const placeNum = place === 'first' ? '1°' : place === 'second' ? '2°' : '3°';
+    const avSize = place === 'first' ? 130 : place === 'second' ? 100 : 88;
 
     return `
-      <div class="podium-spot ${place}">
-        ${crownHtml}
-        <div class="podium-avatar">
-          ${avatarSVG(seller.avatar, seller.color, seller.colorAlt, place === 'first' ? 110 : place === 'second' ? 90 : 78)}
+      <div class="podium-spot ${place} pre-fly" data-place="${place}">
+        ${place === 'first' ? '<div class="podium-light-beam"></div>' : ''}
+        ${place === 'first' ? '<div class="podium-crown" data-state="hidden">👑</div>' : ''}
+        <div class="podium-trail"></div>
+        <div class="podium-avatar" style="--accent: ${seller.color}; --accent-alt: ${seller.colorAlt}; --accent-55: ${seller.color}8c;">
+          ${avatarSVG(seller.avatar, seller.color, seller.colorAlt, avSize)}
         </div>
         <div class="podium-name" style="color: ${seller.color}; text-shadow: 0 0 16px ${seller.color}">${seller.name}</div>
         <div class="podium-pages">${pageText}</div>
-        <div class="podium-sales" style="color: ${seller.color}; text-shadow: 0 0 16px ${seller.color}">${seller.total} VENTAS</div>
+        <div class="podium-sales" style="color: ${seller.color}; text-shadow: 0 0 16px ${seller.color}">
+          <span class="count-up" data-target="${seller.total}">0</span> VENTAS
+        </div>
         <div class="podium-block">
           <div class="place">${placeNum}</div>
         </div>
@@ -588,6 +624,7 @@ function showCeremony(data) {
 
   overlay.innerHTML = `
     <div class="ceremony-rays"></div>
+    <div class="ceremony-stars"></div>
     <button class="ceremony-close" data-action="close">✕</button>
     <h1 class="ceremony-title">
       <span class="trophy">🏆</span>
@@ -595,9 +632,9 @@ function showCeremony(data) {
       <span class="trophy">🏆</span>
     </h1>
     <div class="podium-stage">
-      ${spotHtml(second, 'second')}
-      ${spotHtml(winner, 'first')}
-      ${spotHtml(third,  'third')}
+      ${spotMarkup(second, 'second')}
+      ${spotMarkup(winner, 'first')}
+      ${spotMarkup(third,  'third')}
     </div>
     <div class="ceremony-extras">
       ${totalHtml}
@@ -616,11 +653,130 @@ function showCeremony(data) {
   void overlay.offsetWidth;
   overlay.classList.add('visible');
 
-  // Confeti orquestado
-  setTimeout(() => massiveConfetti(winner.color, winner.colorAlt), 800);
-  setTimeout(() => massiveConfetti('#FFD93D', '#FF8C42'), 1600);
-  setTimeout(() => massiveConfetti(winner.color, '#FF4FB6'), 2600);
-  setTimeout(() => massiveConfetti('#FFD93D', '#5EEAD4'), 3800);
+  // ============== Choreography ==============
+  // 0s: arranca todo, fanfarria comienza
+  Sounds.victoryFanfare();
+
+  // 0.3s: título aparece con glitch
+  setTimeout(() => {
+    overlay.querySelector('.ceremony-title')?.classList.add('appear');
+  }, 300);
+
+  // Función para animar count-up de números
+  function animateCountUp(el, target, duration = 1500) {
+    if (!el) return;
+    const start = Date.now();
+    function step() {
+      const t = Math.min(1, (Date.now() - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const value = Math.round(target * eased);
+      el.textContent = value;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function activateSpot(place, delay) {
+    setTimeout(() => {
+      const spot = overlay.querySelector(`.podium-spot[data-place="${place}"]`);
+      if (!spot) return;
+      spot.classList.remove('pre-fly');
+      spot.classList.add('flying-in');
+      Sounds.swoosh();
+
+      // Después de la entrada (1.4s), aterriza y comienza count-up
+      setTimeout(() => {
+        spot.classList.remove('flying-in');
+        spot.classList.add('landed');
+        Sounds.land();
+        const counter = spot.querySelector('.count-up');
+        if (counter) animateCountUp(counter, parseInt(counter.dataset.target, 10));
+
+        // Iniciar animación de baile en el avatar
+        const avatar = spot.querySelector('.podium-avatar');
+        if (avatar) {
+          avatar.classList.add('celebrating');
+          if (place === 'first') avatar.classList.add('celebrating-strong');
+        }
+
+        // Confetti per spot
+        const colors = {
+          first:  ['#FFD93D', '#FF8C42'],
+          second: ['#C0C0C0', '#E8E8E8'],
+          third:  ['#CD7F32', '#8B4513']
+        };
+        const c = colors[place] || ['#B47CFF', '#FF4FB6'];
+        smallConfetti(c[0]);
+      }, 1400);
+    }, delay);
+  }
+
+  // 3.0s: aparece el #3 (vuela desde la izquierda)
+  if (third) activateSpot('third', 3000);
+
+  // 7.0s: aparece el #2 (vuela desde la derecha)
+  if (second) activateSpot('second', 7000);
+
+  // 11.0s: light beam aparece (preludio del #1)
+  setTimeout(() => {
+    const beam = overlay.querySelector('.podium-spot.first .podium-light-beam');
+    if (beam) beam.classList.add('active');
+  }, 11000);
+
+  // 11.5s: aparece el #1 (desciende del cielo con haz de luz)
+  if (winner) {
+    setTimeout(() => {
+      const spot = overlay.querySelector('.podium-spot[data-place="first"]');
+      if (!spot) return;
+      spot.classList.remove('pre-fly');
+      spot.classList.add('descending-from-sky');
+      Sounds.swoosh();
+
+      // Aterrizaje del ganador (1.6s después)
+      setTimeout(() => {
+        spot.classList.remove('descending-from-sky');
+        spot.classList.add('landed');
+        Sounds.land();
+        const counter = spot.querySelector('.count-up');
+        if (counter) animateCountUp(counter, parseInt(counter.dataset.target, 10), 1800);
+
+        const avatar = spot.querySelector('.podium-avatar');
+        if (avatar) avatar.classList.add('celebrating', 'celebrating-strong');
+
+        // Confeti dorado masivo
+        massiveConfetti(winner.color, '#FFD93D');
+        setTimeout(() => massiveConfetti('#FFD93D', '#FF8C42'), 600);
+      }, 1600);
+
+      // 1.8s después del aterrizaje: corona desciende
+      setTimeout(() => {
+        const crown = overlay.querySelector('.podium-spot.first .podium-crown');
+        if (crown) {
+          crown.dataset.state = 'descending';
+          Sounds.crownDescend();
+          setTimeout(() => { crown.dataset.state = 'placed'; }, 1000);
+        }
+      }, 3400);
+    }, 11500);
+  }
+
+  // 15.5s: confeti final masivo (climax de música)
+  setTimeout(() => {
+    massiveConfetti('#FFD93D', '#FF8C42');
+  }, 15500);
+  setTimeout(() => {
+    massiveConfetti('#FF4FB6', '#B47CFF');
+  }, 16500);
+  setTimeout(() => {
+    massiveConfetti('#5EEAD4', '#FFD93D');
+  }, 17500);
+
+  // Mensajes y acciones aparecen al final (16s)
+  setTimeout(() => {
+    overlay.querySelector('.ceremony-extras')?.classList.add('appear');
+    overlay.querySelector('.ceremony-message')?.classList.add('appear');
+    overlay.querySelector('.ceremony-actions')?.classList.add('appear');
+  }, 16000);
 
   overlay.querySelectorAll('[data-action="close"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -747,6 +903,13 @@ function setupCrossTabSync() {
     if (e.key === STORAGE_KEY && e.newValue) {
       try {
         const incoming = JSON.parse(e.newValue);
+        // Asegurar que commission siempre exista (defensa)
+        if (!incoming.commission) {
+          incoming.commission = {
+            todayDate: null, todayAmount: null, todayPremium: false,
+            month: null, premiumUsedThisMonth: 0, earned: {}
+          };
+        }
         const beforeTop4 = getRanked().slice(0, 4).map(r => r.id);
         const oldTotal = Object.values(state.sellers).reduce((a, b) => a + b, 0);
         const newTotal = Object.values(incoming.sellers).reduce((a, b) => a + b, 0);
@@ -754,6 +917,7 @@ function setupCrossTabSync() {
         const oldSellerTotals = { ...state.sellers };
         state = incoming;
         if (typeof renderAll === 'function') renderAll();
+        if (typeof updateRevealBtn === 'function') updateRevealBtn();
 
         if (newTotal > oldTotal && state.history.length > oldHistLen) {
           const last = state.history[state.history.length - 1];
@@ -1244,6 +1408,262 @@ const Sounds = {
       const tt = 11.4 + i * 0.07;
       snare(tt, 0.10 + i * 0.005);
     }
+  },
+
+  // ============================================================
+  // FANFARRIA DE VICTORIA — Cierre de semana (~18 segundos)
+  // Escala mayor triunfal, brass + bells + drums
+  // ============================================================
+  victoryFanfare() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const master = this.master;
+
+    // Trompeta brillante (sawtooth + harmonic)
+    function trumpet(freq, start, dur, vol = 0.22) {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc1.type = 'sawtooth';
+      osc2.type = 'square';
+      osc1.frequency.value = freq;
+      osc2.frequency.value = freq * 2; // octava arriba
+      const g2 = ctx.createGain();
+      g2.gain.value = 0.3;
+      osc2.connect(g2); g2.connect(g);
+      osc1.connect(g);
+      g.connect(master);
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.03);
+      g.gain.linearRampToValueAtTime(vol * 0.7, t + dur * 0.5);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc1.start(t); osc2.start(t);
+      osc1.stop(t + dur); osc2.stop(t + dur);
+    }
+
+    // Campana brillante (triangle + decay)
+    function bell(freq, start, dur, vol = 0.18) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t);
+      osc.stop(t + dur);
+    }
+
+    // Kick
+    function kick(start, vol = 0.32) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t); osc.stop(t + 0.25);
+    }
+
+    // Cymbal crash (ruido decay)
+    function crash(start, vol = 0.22) {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 1.0, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.5));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass'; filter.frequency.value = 4000;
+      const g = ctx.createGain();
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+      noise.connect(filter); filter.connect(g); g.connect(master);
+      noise.start(t);
+    }
+
+    // Notas (escala C mayor — alegre, triunfal)
+    const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.00;
+    const A4 = 440.00, B4 = 493.88, C5 = 523.25, D5 = 587.33, E5 = 659.25;
+    const F5 = 698.46, G5 = 783.99, A5 = 880.00, B5 = 987.77, C6 = 1046.50;
+    const D6 = 1174.66, E6 = 1318.51, G6 = 1567.98, C7 = 2093.00;
+
+    // ===== Compás 1 (0–2s): apertura triunfal — fanfarria abierta =====
+    crash(0, 0.3);
+    trumpet(C5, 0.0,  0.3, 0.24);
+    trumpet(E5, 0.3,  0.3, 0.26);
+    trumpet(G5, 0.6,  0.3, 0.28);
+    trumpet(C6, 0.9,  1.0, 0.32);
+    bell(C6, 0.9, 1.5, 0.15);
+    kick(0); kick(0.5); kick(1.0); kick(1.5);
+
+    // ===== Compás 2 (2–4s): tema pt 1 =====
+    trumpet(G5, 2.0, 0.3, 0.26);
+    trumpet(G5, 2.3, 0.3, 0.26);
+    trumpet(E5, 2.6, 0.3, 0.26);
+    trumpet(C5, 2.9, 0.3, 0.26);
+    trumpet(G5, 3.2, 0.4, 0.28);
+    trumpet(C6, 3.6, 0.4, 0.30);
+    kick(2.0); kick(2.6); kick(3.2); kick(3.8);
+
+    // ===== Compás 3 (4–6s): tema pt 2 — descenso melódico =====
+    trumpet(B5, 4.0, 0.3, 0.28);
+    trumpet(A5, 4.3, 0.3, 0.28);
+    trumpet(G5, 4.6, 0.3, 0.28);
+    trumpet(F5, 4.9, 0.3, 0.28);
+    trumpet(E5, 5.2, 0.4, 0.30);
+    trumpet(D5, 5.6, 0.2, 0.26);
+    trumpet(C5, 5.8, 0.2, 0.26);
+    kick(4.0); kick(4.6); kick(5.2); kick(5.8);
+
+    // ===== Compás 4 (6–9s): build-up — escala ascendente =====
+    const scale = [C5, D5, E5, F5, G5, A5, B5, C6];
+    scale.forEach((n, i) => {
+      trumpet(n, 6.0 + i * 0.25, 0.22, 0.26 + i * 0.01);
+      bell(n * 2, 6.0 + i * 0.25, 0.4, 0.10);
+    });
+    for (let i = 0; i < 6; i++) kick(6.0 + i * 0.5);
+
+    // Pausa dramática 8.0–8.5
+    crash(8.0, 0.25);
+
+    // ===== Compás 5 (9–12s): tema con harmonía =====
+    trumpet(C6, 8.5, 0.4, 0.32);
+    trumpet(E5, 8.5, 0.4, 0.18); // harmonía 3ra
+    trumpet(D6, 8.9, 0.4, 0.32);
+    trumpet(F5, 8.9, 0.4, 0.18);
+    trumpet(E6, 9.3, 0.4, 0.34);
+    trumpet(G5, 9.3, 0.4, 0.18);
+    trumpet(D6, 9.7, 0.4, 0.32);
+    trumpet(F5, 9.7, 0.4, 0.18);
+    trumpet(C6, 10.1, 0.4, 0.32);
+    trumpet(E5, 10.1, 0.4, 0.18);
+    trumpet(G5, 10.5, 0.6, 0.30);
+    trumpet(C5, 10.5, 0.6, 0.18);
+    trumpet(C6, 11.1, 0.6, 0.32);
+    trumpet(E5, 11.1, 0.6, 0.20);
+    for (let i = 0; i < 5; i++) kick(8.5 + i * 0.5);
+
+    // ===== Compás 6 (12–15s): CLIMAX — para entrada del #1 =====
+    crash(11.5, 0.32);
+    trumpet(G5, 11.7, 0.25, 0.30);
+    trumpet(A5, 11.95, 0.25, 0.30);
+    trumpet(B5, 12.2, 0.25, 0.30);
+    trumpet(C6, 12.45, 0.6, 0.34);
+    bell(C6, 12.45, 1.5, 0.15);
+    bell(E6, 12.45, 1.5, 0.13);
+    bell(G6, 12.45, 1.5, 0.11);
+
+    // Acordes triunfales
+    [C6, E6, G6, C7].forEach((n, i) => {
+      trumpet(n, 13.05 + i * 0.15, 0.5, 0.30);
+    });
+    for (let i = 0; i < 4; i++) kick(11.5 + i * 0.5);
+
+    // ===== Compás 7 (15–18s): RESOLUCIÓN GLORIOSA =====
+    crash(13.8, 0.4);
+    trumpet(C6, 14.0, 0.5, 0.34);
+    trumpet(G5, 14.0, 0.5, 0.22);
+    trumpet(E5, 14.0, 0.5, 0.18);
+    trumpet(C5, 14.0, 0.5, 0.16);
+
+    trumpet(C6, 14.6, 0.4, 0.34);
+    bell(C7, 14.6, 1.0, 0.18);
+
+    // Sustained finale
+    trumpet(C6, 15.2, 2.0, 0.36);
+    trumpet(G5, 15.2, 2.0, 0.22);
+    trumpet(E5, 15.2, 2.0, 0.18);
+    bell(C6, 15.2, 2.5, 0.16);
+    bell(G6, 15.2, 2.5, 0.14);
+    crash(15.2, 0.3);
+    crash(16.5, 0.25);
+
+    // Cierre
+    kick(15.2); kick(15.7); kick(16.2); kick(16.7); kick(17.2);
+  },
+
+  // Swoosh — avatar volando
+  swoosh() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.connect(g); g.connect(this.master);
+    const t = ctx.currentTime;
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(800, t + 0.3);
+    osc.frequency.exponentialRampToValueAtTime(150, t + 0.6);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.2, t + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+    osc.start(t); osc.stop(t + 0.6);
+  },
+
+  // Aterrizaje — thud + bounce
+  land() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.connect(g); g.connect(this.master);
+    const t = ctx.currentTime;
+    osc.frequency.setValueAtTime(200, t);
+    osc.frequency.exponentialRampToValueAtTime(50, t + 0.15);
+    g.gain.setValueAtTime(0.4, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    osc.start(t); osc.stop(t + 0.3);
+    setTimeout(() => this.beep(660, 0.08, 'sine', 0.15), 100);
+    setTimeout(() => this.beep(880, 0.12, 'sine', 0.18), 180);
+  },
+
+  // Corona descendiendo — glissando con campanas
+  crownDescend() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    // Glissando ascendente
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sine';
+    osc.connect(g); g.connect(this.master);
+    const t = ctx.currentTime;
+    osc.frequency.setValueAtTime(440, t);
+    osc.frequency.exponentialRampToValueAtTime(1760, t + 1.0);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.18, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
+    osc.start(t); osc.stop(t + 1.0);
+
+    // Campanas en cascada
+    [523, 659, 783, 1046, 1318].forEach((freq, i) => {
+      setTimeout(() => {
+        const o = ctx.createOscillator();
+        const og = ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.value = freq;
+        o.connect(og); og.connect(this.master);
+        og.gain.setValueAtTime(0.2, ctx.currentTime);
+        og.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        o.start(); o.stop(ctx.currentTime + 0.5);
+      }, 100 * i + 200);
+    });
   }
 };
 
