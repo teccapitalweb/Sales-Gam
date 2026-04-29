@@ -233,6 +233,14 @@
     <div class="day-buttons-row" id="dayButtonsRow"></div>
   </div>
 
+  <details class="sound-settings-panel">
+    <summary class="sound-settings-summary">
+      🎵 PERSONALIZAR SONIDOS
+      <span class="sound-settings-hint">Click para expandir y elegir tus sonidos favoritos</span>
+    </summary>
+    <div class="sound-settings-body" id="soundSettingsBody"></div>
+  </details>
+
   <div class="cp-grid" id="cpGrid"></div>
 
   <div class="cp-summary">
@@ -337,6 +345,90 @@ function renderControlPanel() {
 function renderAll() {
   renderControlPanel();
   renderDayButtons();
+  renderSoundSettings();
+}
+
+// ============== PANEL DE SONIDOS ==============
+function renderSoundSettings() {
+  const host = document.getElementById('soundSettingsBody');
+  if (!host) return;
+
+  let html = '';
+  Object.entries(SOUND_PACKS).forEach(([category, cat]) => {
+    html += `
+      <div class="sound-category">
+        <div class="sound-category-head">
+          <div class="sound-category-label">${cat.label}</div>
+          <div class="sound-category-desc">${cat.description}</div>
+        </div>
+        <div class="sound-options">
+    `;
+    Object.entries(cat.options).forEach(([packId, pack]) => {
+      const isActive = Sounds.active[category] === packId;
+      html += `
+        <div class="sound-option ${isActive ? 'active' : ''}" data-category="${category}" data-pack="${packId}">
+          <div class="sound-option-info">
+            <div class="sound-option-label">${pack.label}</div>
+            <div class="sound-option-desc">${pack.description}</div>
+          </div>
+          <div class="sound-option-actions">
+            <button class="sound-preview-btn" data-action="preview" data-category="${category}" data-pack="${packId}">▶ Preview</button>
+            <button class="sound-select-btn" data-action="select" data-category="${category}" data-pack="${packId}">${isActive ? '✓ Activo' : 'Elegir'}</button>
+          </div>
+        </div>
+      `;
+    });
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  host.innerHTML = html;
+
+  // Listeners
+  host.querySelectorAll('[data-action="preview"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      Sounds.init();
+      const cat  = btn.dataset.category;
+      const pack = btn.dataset.pack;
+      previewSound(cat, pack);
+    });
+  });
+
+  host.querySelectorAll('[data-action="select"]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cat  = btn.dataset.category;
+      const pack = btn.dataset.pack;
+      Sounds.setPack(cat, pack);
+      renderSoundSettings();
+    });
+  });
+}
+
+// === Preview de un pack sin cambiar el activo ===
+function previewSound(category, packId) {
+  // Guardar el activo actual, cambiar temporalmente, reproducir, restaurar
+  const prev = Sounds.active[category];
+  Sounds.active[category] = packId;
+
+  if (category === 'sale') {
+    Sounds.sale();
+  } else if (category === 'reveal') {
+    // Solo mostrar la melodía, NO la animación visual
+    if (packId === 'squid') Sounds._reveal_squid();
+    else if (packId === 'drumroll') Sounds._reveal_drumroll();
+    else if (packId === 'casino') Sounds._reveal_casino();
+  } else if (category === 'victory') {
+    if (packId === 'classical') Sounds._victory_classical();
+    else if (packId === 'anthem') Sounds._victory_anthem();
+    else if (packId === 'celebration') Sounds._victory_celebration();
+  }
+
+  // Restaurar
+  Sounds.active[category] = prev;
 }
 
 // ============== Botones ==============

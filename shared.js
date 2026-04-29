@@ -1243,12 +1243,55 @@ function triggerCommissionReveal(day, forceReroll = false) {
 // ============================================================
 // SONIDOS — Web Audio API (sintetizados, sin archivos)
 // ============================================================
+const SOUND_KEY_PREFIX = 'sa-sound-pack-';
+
+// Definición de los packs disponibles
+const SOUND_PACKS = {
+  sale: {
+    label: '🔔 Sonido de venta',
+    description: 'Cuando alguien registra una venta',
+    options: {
+      coin:    { label: '🪙 Moneda Mario',  description: 'Ding clásico de videojuego' },
+      arcade:  { label: '🎮 Arcade',        description: 'Beep estilo arcade 80s' },
+      bell:    { label: '🛎️ Campana',       description: 'Campanita suave' },
+      laser:   { label: '🔫 Láser',         description: 'Pew-pew futurista' }
+    },
+    default: 'coin'
+  },
+  reveal: {
+    label: '🎵 Música de revelación',
+    description: 'Cuando se rolea la comisión del día',
+    options: {
+      squid:   { label: '🦑 Squid Game',     description: 'Trompetas dramáticas + drumroll' },
+      drumroll:{ label: '🥁 Solo drumroll',   description: 'Tambores tradicionales de tensión' },
+      casino:  { label: '🎰 Casino',         description: 'Slot machine con bells' }
+    },
+    default: 'squid'
+  },
+  victory: {
+    label: '🏆 Música de victoria',
+    description: 'Cuando se cierra la semana (ceremonia)',
+    options: {
+      classical: { label: '🎺 Clásica épica', description: 'Fanfarria triunfal estilo orquesta' },
+      anthem:    { label: '🎸 Himno glorioso', description: 'Acordes potentes ascendentes' },
+      celebration:{ label: '🎉 Celebración',   description: 'Más alegre, ritmo de fiesta' }
+    },
+    default: 'classical'
+  }
+};
+
 const Sounds = {
   enabled: (function() {
     try { return localStorage.getItem('sa-sound') !== 'off'; } catch (e) { return true; }
   })(),
   ctx: null,
   master: null,
+  // Packs activos por categoría
+  active: {
+    sale:    (function(){ try { return localStorage.getItem(SOUND_KEY_PREFIX+'sale') || 'coin'; } catch(e) { return 'coin'; }})(),
+    reveal:  (function(){ try { return localStorage.getItem(SOUND_KEY_PREFIX+'reveal') || 'squid'; } catch(e) { return 'squid'; }})(),
+    victory: (function(){ try { return localStorage.getItem(SOUND_KEY_PREFIX+'victory') || 'classical'; } catch(e) { return 'classical'; }})()
+  },
 
   init() {
     if (this.ctx) return;
@@ -1270,6 +1313,12 @@ const Sounds = {
     return this.enabled;
   },
 
+  setPack(category, packId) {
+    if (!SOUND_PACKS[category] || !SOUND_PACKS[category].options[packId]) return;
+    this.active[category] = packId;
+    try { localStorage.setItem(SOUND_KEY_PREFIX + category, packId); } catch (e) {}
+  },
+
   beep(freq, duration = 0.1, type = 'square', startGain = 0.3) {
     if (!this.enabled) return;
     this.init(); this.resume();
@@ -1285,16 +1334,62 @@ const Sounds = {
     osc.stop(this.ctx.currentTime + duration);
   },
 
-  // Venta normal — Mario coin "ding!"
-  sale() {
+  // ====== SONIDOS DE VENTA — 4 packs ======
+  _sale_coin() {
     this.beep(523.25, 0.05, 'square', 0.3);   // C5
     setTimeout(() => this.beep(783.99, 0.12, 'square', 0.3), 60);  // G5
+  },
+  _sale_arcade() {
+    this.beep(880, 0.04, 'square', 0.25);
+    setTimeout(() => this.beep(1100, 0.04, 'square', 0.25), 40);
+    setTimeout(() => this.beep(1320, 0.08, 'square', 0.28), 80);
+  },
+  _sale_bell() {
+    this.beep(1318.51, 0.18, 'triangle', 0.32);
+    setTimeout(() => this.beep(1567.98, 0.22, 'triangle', 0.28), 80);
+  },
+  _sale_laser() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.connect(g); g.connect(this.master);
+    const t = ctx.currentTime;
+    osc.frequency.setValueAtTime(1500, t);
+    osc.frequency.exponentialRampToValueAtTime(400, t + 0.15);
+    g.gain.setValueAtTime(0.3, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+    osc.start(t); osc.stop(t + 0.2);
+  },
+
+  sale() {
+    const fn = '_sale_' + this.active.sale;
+    if (typeof this[fn] === 'function') this[fn]();
+    else this._sale_coin();
   },
 
   // Venta especial / outsider — más alto
   saleOut() {
-    this.beep(659.25, 0.05, 'square', 0.3);
-    setTimeout(() => this.beep(987.77, 0.12, 'square', 0.3), 60);
+    // Variante más aguda del pack actual
+    if (this.active.sale === 'coin') {
+      this.beep(659.25, 0.05, 'square', 0.3);
+      setTimeout(() => this.beep(987.77, 0.12, 'square', 0.3), 60);
+    } else if (this.active.sale === 'arcade') {
+      this.beep(1100, 0.04, 'square', 0.28);
+      setTimeout(() => this.beep(1320, 0.04, 'square', 0.28), 40);
+      setTimeout(() => this.beep(1760, 0.10, 'square', 0.30), 80);
+    } else if (this.active.sale === 'bell') {
+      this.beep(1567.98, 0.18, 'triangle', 0.34);
+      setTimeout(() => this.beep(1975.53, 0.24, 'triangle', 0.30), 80);
+    } else if (this.active.sale === 'laser') {
+      this._sale_laser();
+      setTimeout(() => this._sale_laser(), 100);
+    } else {
+      this.sale();
+    }
   },
 
   // Sube de posición — riser
@@ -1354,16 +1449,18 @@ const Sounds = {
     setTimeout(() => this.beep(880, 0.18, 'square', 0.35), 100);
   },
 
-  // Melodía dramática estilo Squid Game (~14 segundos)
-  // Trompetas + drums marcando tensión, sube intensidad
-  squidMelody() {
+  // ============================================================
+  // PACKS DE REVELACIÓN (3 estilos)
+  // ============================================================
+
+  // Pack 1: Squid Game — trompetas dramáticas (~14 segundos)
+  _reveal_squid() {
     if (!this.enabled) return;
     this.init(); this.resume();
     if (!this.ctx) return;
     const ctx = this.ctx;
     const master = this.master;
 
-    // Brass sintético (sawtooth + sub-octava)
     function brass(freq, start, dur, vol = 0.22) {
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
@@ -1382,8 +1479,6 @@ const Sounds = {
       osc1.start(t); osc2.start(t);
       osc1.stop(t + dur); osc2.stop(t + dur);
     }
-
-    // Kick drum
     function kick(start, vol = 0.35) {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -1396,8 +1491,6 @@ const Sounds = {
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
       osc.start(t); osc.stop(t + 0.25);
     }
-
-    // Snare (ruido filtrado)
     function snare(start, vol = 0.18) {
       const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
       const data = buf.getChannelData(0);
@@ -1414,77 +1507,123 @@ const Sounds = {
       noise.start(t);
     }
 
-    // Notas (escala A minor — tono dramático)
-    const A3 = 220, A4 = 440, C5 = 523, D5 = 587;
-    const E5 = 659, F5 = 698, G5 = 783, A5 = 880, B5 = 988, C6 = 1046;
+    const A4=440, C5=523, D5=587, E5=659, F5=698, G5=783, A5=880, B5=988, C6=1046;
 
-    // ===== Compás 1: intro lento, anticipación (0–2s) =====
-    brass(A4, 0,    0.5, 0.18);
-    brass(C5, 0.5,  0.5, 0.20);
-    brass(E5, 1.0,  0.5, 0.22);
-    brass(A5, 1.5,  0.5, 0.24);
+    brass(A4, 0, 0.5, 0.18); brass(C5, 0.5, 0.5, 0.20); brass(E5, 1.0, 0.5, 0.22); brass(A5, 1.5, 0.5, 0.24);
     kick(0); kick(0.5); kick(1.0); kick(1.5);
-
-    // ===== Compás 2: descenso dramático (2–4s) =====
-    brass(G5, 2.0, 0.5, 0.24);
-    brass(F5, 2.5, 0.5, 0.24);
-    brass(E5, 3.0, 0.5, 0.24);
-    brass(D5, 3.5, 0.5, 0.24);
-    kick(2.0); kick(2.5); kick(3.0); kick(3.5);
-    snare(2.5); snare(3.5);
-
-    // ===== Compás 3: subida épica (4–6s) =====
-    brass(C5, 4.0, 0.4, 0.24);
-    brass(E5, 4.4, 0.4, 0.26);
-    brass(G5, 4.8, 0.4, 0.28);
-    brass(B5, 5.2, 0.4, 0.30);
-    brass(C6, 5.6, 0.4, 0.32);
+    brass(G5, 2.0, 0.5, 0.24); brass(F5, 2.5, 0.5, 0.24); brass(E5, 3.0, 0.5, 0.24); brass(D5, 3.5, 0.5, 0.24);
+    kick(2.0); kick(2.5); kick(3.0); kick(3.5); snare(2.5); snare(3.5);
+    brass(C5, 4.0, 0.4, 0.24); brass(E5, 4.4, 0.4, 0.26); brass(G5, 4.8, 0.4, 0.28);
+    brass(B5, 5.2, 0.4, 0.30); brass(C6, 5.6, 0.4, 0.32);
     for (let i = 0; i < 4; i++) kick(4.0 + i * 0.5);
     snare(4.5); snare(5.5);
-
-    // ===== Compás 4: climax con harmonía (6–8.4s) =====
-    brass(A5, 6.0, 0.6, 0.30);
-    brass(C5, 6.0, 0.6, 0.16);  // harmonía
-    brass(G5, 6.6, 0.6, 0.30);
-    brass(E5, 6.6, 0.6, 0.16);
-    brass(A5, 7.2, 0.6, 0.32);
-    brass(E5, 7.2, 0.6, 0.16);
-    brass(C6, 7.8, 0.6, 0.34);
-    brass(A5, 7.8, 0.6, 0.18);
+    brass(A5, 6.0, 0.6, 0.30); brass(C5, 6.0, 0.6, 0.16);
+    brass(G5, 6.6, 0.6, 0.30); brass(E5, 6.6, 0.6, 0.16);
+    brass(A5, 7.2, 0.6, 0.32); brass(E5, 7.2, 0.6, 0.16);
+    brass(C6, 7.8, 0.6, 0.34); brass(A5, 7.8, 0.6, 0.18);
     for (let i = 0; i < 5; i++) { kick(6.0 + i * 0.5); snare(6.25 + i * 0.5); }
-
-    // ===== Compás 5: descenso dramático final (8.4–11.4s) =====
-    brass(C6, 8.4, 0.5, 0.34);
-    brass(B5, 8.9, 0.5, 0.34);
-    brass(A5, 9.4, 0.5, 0.34);
-    brass(G5, 9.9, 0.5, 0.32);
-    brass(F5, 10.4, 0.5, 0.32);
-    brass(E5, 10.9, 0.5, 0.32);
+    brass(C6, 8.4, 0.5, 0.34); brass(B5, 8.9, 0.5, 0.34);
+    brass(A5, 9.4, 0.5, 0.34); brass(G5, 9.9, 0.5, 0.32);
+    brass(F5, 10.4, 0.5, 0.32); brass(E5, 10.9, 0.5, 0.32);
     for (let i = 0; i < 5; i++) { kick(8.4 + i * 0.5); snare(8.65 + i * 0.5); }
-
-    // ===== Compás 6: nota sostenida + drumroll (11.4–13.5s) =====
-    brass(A5, 11.4, 1.8, 0.36);
-    brass(E5, 11.4, 1.8, 0.18);
-    brass(C5, 11.4, 1.8, 0.16);
-    // Drumroll snare en aceleración
+    brass(A5, 11.4, 1.8, 0.36); brass(E5, 11.4, 1.8, 0.18); brass(C5, 11.4, 1.8, 0.16);
     for (let i = 0; i < 30; i++) {
       const tt = 11.4 + i * 0.07;
       snare(tt, 0.10 + i * 0.005);
     }
   },
 
-  // ============================================================
-  // FANFARRIA DE VICTORIA — Cierre de semana (~18 segundos)
-  // Escala mayor triunfal, brass + bells + drums
-  // ============================================================
-  victoryFanfare() {
+  // Pack 2: Solo drumroll tradicional con kicks acelerando
+  _reveal_drumroll() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    // Drumroll snare aumentando intensidad
+    this.drumroll(13000);
+    // Kicks marcando el ritmo, acelerando
+    const intervals = [0, 1.5, 3.0, 4.3, 5.5, 6.5, 7.4, 8.2, 8.9, 9.5, 10.0, 10.4, 10.7, 10.9, 11.1, 11.3, 11.5, 11.7, 11.9, 12.1, 12.3, 12.5, 12.7, 12.9];
+    intervals.forEach(t => {
+      setTimeout(() => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.connect(g); g.connect(this.master);
+        const now = ctx.currentTime;
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.15);
+        g.gain.setValueAtTime(0.32, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        osc.start(now); osc.stop(now + 0.25);
+      }, t * 1000);
+    });
+  },
+
+  // Pack 3: Casino — slot machine con bells y ticks rítmicos
+  _reveal_casino() {
     if (!this.enabled) return;
     this.init(); this.resume();
     if (!this.ctx) return;
     const ctx = this.ctx;
     const master = this.master;
 
-    // Trompeta brillante (sawtooth + harmonic)
+    // Bells melódicos en escala mayor
+    const notes = [523, 659, 783, 1046, 1318, 1567];
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i >= 28) { clearInterval(interval); return; }
+      const freq = notes[i % notes.length];
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0.2, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      osc.start(t); osc.stop(t + 0.3);
+      i++;
+    }, 450);
+
+    // Ticks de fondo aceleran al final
+    let tickCount = 0;
+    function nextTick() {
+      if (tickCount > 60) return;
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = 1500 + Math.random() * 200;
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime;
+      g.gain.setValueAtTime(0.08, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+      osc.start(t); osc.stop(t + 0.05);
+      tickCount++;
+      const delay = Math.max(80, 250 - tickCount * 3);
+      setTimeout(nextTick, delay);
+    }
+    nextTick();
+  },
+
+  // Dispatcher para revelación
+  squidMelody() {
+    const fn = '_reveal_' + this.active.reveal;
+    if (typeof this[fn] === 'function') this[fn]();
+    else this._reveal_squid();
+  },
+
+  // ============================================================
+  // PACKS DE VICTORIA (3 estilos)
+  // ============================================================
+
+  // Pack 1: Clásica épica — fanfarria triunfal estilo orquesta (~18s)
+  _victory_classical() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const master = this.master;
+
     function trumpet(freq, start, dur, vol = 0.22) {
       const osc1 = ctx.createOscillator();
       const osc2 = ctx.createOscillator();
@@ -1492,7 +1631,7 @@ const Sounds = {
       osc1.type = 'sawtooth';
       osc2.type = 'square';
       osc1.frequency.value = freq;
-      osc2.frequency.value = freq * 2; // octava arriba
+      osc2.frequency.value = freq * 2;
       const g2 = ctx.createGain();
       g2.gain.value = 0.3;
       osc2.connect(g2); g2.connect(g);
@@ -1506,8 +1645,6 @@ const Sounds = {
       osc1.start(t); osc2.start(t);
       osc1.stop(t + dur); osc2.stop(t + dur);
     }
-
-    // Campana brillante (triangle + decay)
     function bell(freq, start, dur, vol = 0.18) {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -1520,8 +1657,6 @@ const Sounds = {
       osc.start(t);
       osc.stop(t + dur);
     }
-
-    // Kick
     function kick(start, vol = 0.32) {
       const osc = ctx.createOscillator();
       const g = ctx.createGain();
@@ -1534,8 +1669,6 @@ const Sounds = {
       g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
       osc.start(t); osc.stop(t + 0.25);
     }
-
-    // Cymbal crash (ruido decay)
     function crash(start, vol = 0.22) {
       const buf = ctx.createBuffer(1, ctx.sampleRate * 1.0, ctx.sampleRate);
       const data = buf.getChannelData(0);
@@ -1554,105 +1687,223 @@ const Sounds = {
       noise.start(t);
     }
 
-    // Notas (escala C mayor — alegre, triunfal)
-    const C4 = 261.63, D4 = 293.66, E4 = 329.63, F4 = 349.23, G4 = 392.00;
-    const A4 = 440.00, B4 = 493.88, C5 = 523.25, D5 = 587.33, E5 = 659.25;
-    const F5 = 698.46, G5 = 783.99, A5 = 880.00, B5 = 987.77, C6 = 1046.50;
-    const D6 = 1174.66, E6 = 1318.51, G6 = 1567.98, C7 = 2093.00;
+    const C5=523.25, D5=587.33, E5=659.25, F5=698.46, G5=783.99;
+    const A5=880, B5=987.77, C6=1046.5, D6=1174.66, E6=1318.51;
+    const F6=1396.91, G6=1567.98, C7=2093;
 
-    // ===== Compás 1 (0–2s): apertura triunfal — fanfarria abierta =====
     crash(0, 0.3);
-    trumpet(C5, 0.0,  0.3, 0.24);
-    trumpet(E5, 0.3,  0.3, 0.26);
-    trumpet(G5, 0.6,  0.3, 0.28);
-    trumpet(C6, 0.9,  1.0, 0.32);
-    bell(C6, 0.9, 1.5, 0.15);
+    trumpet(C5, 0.0, 0.3, 0.24); trumpet(E5, 0.3, 0.3, 0.26); trumpet(G5, 0.6, 0.3, 0.28);
+    trumpet(C6, 0.9, 1.0, 0.32); bell(C6, 0.9, 1.5, 0.15);
     kick(0); kick(0.5); kick(1.0); kick(1.5);
-
-    // ===== Compás 2 (2–4s): tema pt 1 =====
-    trumpet(G5, 2.0, 0.3, 0.26);
-    trumpet(G5, 2.3, 0.3, 0.26);
-    trumpet(E5, 2.6, 0.3, 0.26);
-    trumpet(C5, 2.9, 0.3, 0.26);
-    trumpet(G5, 3.2, 0.4, 0.28);
-    trumpet(C6, 3.6, 0.4, 0.30);
+    trumpet(G5, 2.0, 0.3, 0.26); trumpet(G5, 2.3, 0.3, 0.26);
+    trumpet(E5, 2.6, 0.3, 0.26); trumpet(C5, 2.9, 0.3, 0.26);
+    trumpet(G5, 3.2, 0.4, 0.28); trumpet(C6, 3.6, 0.4, 0.30);
     kick(2.0); kick(2.6); kick(3.2); kick(3.8);
-
-    // ===== Compás 3 (4–6s): tema pt 2 — descenso melódico =====
-    trumpet(B5, 4.0, 0.3, 0.28);
-    trumpet(A5, 4.3, 0.3, 0.28);
-    trumpet(G5, 4.6, 0.3, 0.28);
-    trumpet(F5, 4.9, 0.3, 0.28);
-    trumpet(E5, 5.2, 0.4, 0.30);
-    trumpet(D5, 5.6, 0.2, 0.26);
-    trumpet(C5, 5.8, 0.2, 0.26);
+    trumpet(B5, 4.0, 0.3, 0.28); trumpet(A5, 4.3, 0.3, 0.28);
+    trumpet(G5, 4.6, 0.3, 0.28); trumpet(F5, 4.9, 0.3, 0.28);
+    trumpet(E5, 5.2, 0.4, 0.30); trumpet(D5, 5.6, 0.2, 0.26); trumpet(C5, 5.8, 0.2, 0.26);
     kick(4.0); kick(4.6); kick(5.2); kick(5.8);
-
-    // ===== Compás 4 (6–9s): build-up — escala ascendente =====
-    const scale = [C5, D5, E5, F5, G5, A5, B5, C6];
-    scale.forEach((n, i) => {
+    [C5, D5, E5, F5, G5, A5, B5, C6].forEach((n, i) => {
       trumpet(n, 6.0 + i * 0.25, 0.22, 0.26 + i * 0.01);
       bell(n * 2, 6.0 + i * 0.25, 0.4, 0.10);
     });
     for (let i = 0; i < 6; i++) kick(6.0 + i * 0.5);
-
-    // Pausa dramática 8.0–8.5
     crash(8.0, 0.25);
-
-    // ===== Compás 5 (9–12s): tema con harmonía =====
-    trumpet(C6, 8.5, 0.4, 0.32);
-    trumpet(E5, 8.5, 0.4, 0.18); // harmonía 3ra
-    trumpet(D6, 8.9, 0.4, 0.32);
-    trumpet(F5, 8.9, 0.4, 0.18);
-    trumpet(E6, 9.3, 0.4, 0.34);
-    trumpet(G5, 9.3, 0.4, 0.18);
-    trumpet(D6, 9.7, 0.4, 0.32);
-    trumpet(F5, 9.7, 0.4, 0.18);
-    trumpet(C6, 10.1, 0.4, 0.32);
-    trumpet(E5, 10.1, 0.4, 0.18);
-    trumpet(G5, 10.5, 0.6, 0.30);
-    trumpet(C5, 10.5, 0.6, 0.18);
-    trumpet(C6, 11.1, 0.6, 0.32);
-    trumpet(E5, 11.1, 0.6, 0.20);
+    trumpet(C6, 8.5, 0.4, 0.32); trumpet(E5, 8.5, 0.4, 0.18);
+    trumpet(D6, 8.9, 0.4, 0.32); trumpet(F5, 8.9, 0.4, 0.18);
+    trumpet(E6, 9.3, 0.4, 0.34); trumpet(G5, 9.3, 0.4, 0.18);
+    trumpet(D6, 9.7, 0.4, 0.32); trumpet(F5, 9.7, 0.4, 0.18);
+    trumpet(C6, 10.1, 0.4, 0.32); trumpet(E5, 10.1, 0.4, 0.18);
+    trumpet(G5, 10.5, 0.6, 0.30); trumpet(C5, 10.5, 0.6, 0.18);
+    trumpet(C6, 11.1, 0.6, 0.32); trumpet(E5, 11.1, 0.6, 0.20);
     for (let i = 0; i < 5; i++) kick(8.5 + i * 0.5);
-
-    // ===== Compás 6 (12–15s): CLIMAX — para entrada del #1 =====
     crash(11.5, 0.32);
-    trumpet(G5, 11.7, 0.25, 0.30);
-    trumpet(A5, 11.95, 0.25, 0.30);
-    trumpet(B5, 12.2, 0.25, 0.30);
-    trumpet(C6, 12.45, 0.6, 0.34);
-    bell(C6, 12.45, 1.5, 0.15);
-    bell(E6, 12.45, 1.5, 0.13);
-    bell(G6, 12.45, 1.5, 0.11);
-
-    // Acordes triunfales
+    trumpet(G5, 11.7, 0.25, 0.30); trumpet(A5, 11.95, 0.25, 0.30);
+    trumpet(B5, 12.2, 0.25, 0.30); trumpet(C6, 12.45, 0.6, 0.34);
+    bell(C6, 12.45, 1.5, 0.15); bell(E6, 12.45, 1.5, 0.13); bell(G6, 12.45, 1.5, 0.11);
     [C6, E6, G6, C7].forEach((n, i) => {
       trumpet(n, 13.05 + i * 0.15, 0.5, 0.30);
     });
     for (let i = 0; i < 4; i++) kick(11.5 + i * 0.5);
-
-    // ===== Compás 7 (15–18s): RESOLUCIÓN GLORIOSA =====
     crash(13.8, 0.4);
-    trumpet(C6, 14.0, 0.5, 0.34);
-    trumpet(G5, 14.0, 0.5, 0.22);
-    trumpet(E5, 14.0, 0.5, 0.18);
-    trumpet(C5, 14.0, 0.5, 0.16);
-
-    trumpet(C6, 14.6, 0.4, 0.34);
-    bell(C7, 14.6, 1.0, 0.18);
-
-    // Sustained finale
-    trumpet(C6, 15.2, 2.0, 0.36);
-    trumpet(G5, 15.2, 2.0, 0.22);
-    trumpet(E5, 15.2, 2.0, 0.18);
-    bell(C6, 15.2, 2.5, 0.16);
-    bell(G6, 15.2, 2.5, 0.14);
-    crash(15.2, 0.3);
-    crash(16.5, 0.25);
-
-    // Cierre
+    trumpet(C6, 14.0, 0.5, 0.34); trumpet(G5, 14.0, 0.5, 0.22);
+    trumpet(E5, 14.0, 0.5, 0.18); trumpet(C5, 14.0, 0.5, 0.16);
+    trumpet(C6, 14.6, 0.4, 0.34); bell(C7, 14.6, 1.0, 0.18);
+    trumpet(C6, 15.2, 2.0, 0.36); trumpet(G5, 15.2, 2.0, 0.22);
+    trumpet(E5, 15.2, 2.0, 0.18); bell(C6, 15.2, 2.5, 0.16); bell(G6, 15.2, 2.5, 0.14);
+    crash(15.2, 0.3); crash(16.5, 0.25);
     kick(15.2); kick(15.7); kick(16.2); kick(16.7); kick(17.2);
+  },
+
+  // Pack 2: Himno glorioso — acordes potentes ascendentes
+  _victory_anthem() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const master = this.master;
+
+    function chord(freqs, start, dur, vol = 0.18) {
+      freqs.forEach(freq => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.value = freq;
+        osc.connect(g); g.connect(master);
+        const t = ctx.currentTime + start;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + 0.1);
+        g.gain.linearRampToValueAtTime(vol * 0.8, t + dur * 0.7);
+        g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+        osc.start(t); osc.stop(t + dur);
+      });
+    }
+    function kick(start, vol = 0.32) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t); osc.stop(t + 0.25);
+    }
+
+    // C, G, Am, F progresión clásica
+    const C  = [261.63, 329.63, 392.00];        // C E G
+    const G  = [196.00, 293.66, 392.00, 493.88];// G D G B
+    const Am = [220.00, 329.63, 440.00];        // A E A
+    const F  = [174.61, 261.63, 349.23, 440.00];// F C F A
+    const Cmaj = [261.63, 329.63, 392.00, 523.25, 659.25]; // C major full
+
+    chord(C,  0.0, 1.5, 0.20);  kick(0.0); kick(0.7);
+    chord(G,  1.5, 1.5, 0.22);  kick(1.5); kick(2.2);
+    chord(Am, 3.0, 1.5, 0.24);  kick(3.0); kick(3.7);
+    chord(F,  4.5, 1.5, 0.26);  kick(4.5); kick(5.2);
+
+    chord(C,  6.0, 1.0, 0.26);  kick(6.0);
+    chord(G,  7.0, 1.0, 0.28);  kick(7.0);
+    chord(Am, 8.0, 1.0, 0.30);  kick(8.0);
+    chord(F,  9.0, 1.0, 0.32);  kick(9.0);
+
+    chord(C,  10.0, 0.7, 0.30); kick(10.0);
+    chord(G,  10.7, 0.7, 0.32); kick(10.7);
+    chord(F,  11.4, 0.7, 0.34); kick(11.4);
+    chord(G,  12.1, 0.7, 0.36); kick(12.1);
+
+    // Climax sostenido
+    chord(Cmaj, 12.8, 5.0, 0.40);
+    kick(12.8, 0.4); kick(13.3, 0.36); kick(13.8, 0.32);
+    kick(14.3, 0.32); kick(14.8, 0.32); kick(15.3, 0.32);
+    kick(15.8, 0.32); kick(16.3, 0.32); kick(16.8, 0.32);
+    kick(17.3, 0.36);
+  },
+
+  // Pack 3: Celebración — alegre, ritmo de fiesta con brass animado
+  _victory_celebration() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const master = this.master;
+
+    function bell(freq, start, dur, vol = 0.18) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = freq;
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur);
+    }
+    function pluck(freq, start, dur = 0.2, vol = 0.18) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.value = freq;
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc.start(t); osc.stop(t + dur);
+    }
+    function kick(start, vol = 0.32) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      osc.frequency.setValueAtTime(150, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t); osc.stop(t + 0.25);
+    }
+    function hh(start, vol = 0.10) {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.05, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass'; filter.frequency.value = 6000;
+      const g = ctx.createGain();
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+      noise.connect(filter); filter.connect(g); g.connect(master);
+      noise.start(t);
+    }
+
+    // Melodía festiva en C mayor con ritmo bailable
+    const melody = [
+      // tiempo, freq, duración
+      [0.0, 523, 0.25], [0.25, 659, 0.25], [0.5, 783, 0.25], [0.75, 1046, 0.5],
+      [1.5, 783, 0.25], [1.75, 659, 0.25], [2.0, 783, 0.5],
+      [2.5, 880, 0.25], [2.75, 1046, 0.25], [3.0, 1318, 0.5],
+      [3.5, 1046, 0.25], [3.75, 880, 0.25], [4.0, 783, 0.5],
+
+      [4.5, 523, 0.25], [4.75, 659, 0.25], [5.0, 783, 0.25], [5.25, 1046, 0.5],
+      [6.0, 1318, 0.25], [6.25, 1567, 0.25], [6.5, 1318, 0.5],
+      [7.0, 1046, 0.25], [7.25, 880, 0.25], [7.5, 1046, 0.5],
+      [8.0, 783, 0.25], [8.25, 1046, 0.25], [8.5, 1318, 0.5],
+
+      [9.0, 1567, 0.5], [9.5, 1318, 0.5], [10.0, 1567, 0.5],
+      [10.5, 1318, 0.25], [10.75, 1046, 0.25], [11.0, 783, 0.5],
+
+      // Final climático
+      [11.5, 1046, 0.4], [11.9, 1318, 0.4], [12.3, 1567, 0.6],
+      [12.9, 1046, 0.3], [13.2, 1318, 0.3], [13.5, 2093, 1.5]
+    ];
+    melody.forEach(([t, f, d]) => {
+      pluck(f, t, d, 0.20);
+      bell(f, t, d * 1.5, 0.10);
+    });
+
+    // Ritmo de batería bailable (4/4 con kicks fuertes)
+    for (let beat = 0; beat < 36; beat++) {
+      const t = beat * 0.4;
+      kick(t, 0.32);
+      hh(t + 0.2, 0.10);
+      hh(t + 0.4, 0.08);
+    }
+
+    // Acorde final masivo
+    [261.63, 329.63, 392, 523.25, 659.25, 783.99, 1046.5].forEach(f => {
+      pluck(f, 13.5, 2.5, 0.18);
+      bell(f, 13.5, 3.0, 0.12);
+    });
+  },
+
+  // Dispatcher para victoria
+  victoryFanfare() {
+    const fn = '_victory_' + this.active.victory;
+    if (typeof this[fn] === 'function') this[fn]();
+    else this._victory_classical();
   },
 
   // Swoosh — avatar volando

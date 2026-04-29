@@ -1254,3 +1254,160 @@ button {
   .day-btn-day { font-size: 11px; }
   .day-btn-amount { font-size: 16px; }
 }
+
+/* ========================================================
+   PANEL DE PERSONALIZACIÓN DE SONIDOS
+   ======================================================== */
+.sound-settings-panel {
+  background: linear-gradient(135deg, rgba(20,8,40,0.6), rgba(35,15,65,0.6));
+  border: 1px solid rgba(94,234,212,0.3);
+  border-radius: 14px;
+  padding: 16px 20px;
+  margin-bottom: 24px;
+}
+.sound-settings-summary {
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  color: #5EEAD4;
+  text-shadow: 0 0 12px rgba(94,234,212,0.6);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  list-style: none;
+  user-select: none;
+  padding: 4px 0;
+}
+.sound-settings-summary::-webkit-details-marker { display: none; }
+.sound-settings-summary::before {
+  content: '▸ ';
+  font-size: 12px;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.sound-settings-panel[open] .sound-settings-summary::before {
+  transform: rotate(90deg);
+}
+.sound-settings-summary:hover {
+  color: #fff;
+}
+.sound-settings-hint {
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.4);
+  font-weight: 400;
+  text-transform: none;
+  text-shadow: none;
+}
+.sound-settings-body {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sound-category {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(180,124,255,0.2);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.sound-category-head {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.sound-category-label {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: #FFD93D;
+  text-shadow: 0 0 8px rgba(255,217,61,0.5);
+}
+.sound-category-desc {
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 11px;
+  color: rgba(255,255,255,0.55);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+.sound-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 10px;
+}
+.sound-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(20,8,40,0.5);
+  border: 1px solid rgba(180,124,255,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s;
+}
+.sound-option.active {
+  background: linear-gradient(135deg, rgba(94,234,212,0.18), rgba(20,8,40,0.6));
+  border-color: #5EEAD4;
+  box-shadow: 0 0 18px rgba(94,234,212,0.25);
+}
+.sound-option-info {
+  flex: 1; min-width: 0;
+}
+.sound-option-label {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 12px;
+  color: #fff;
+  letter-spacing: 0.06em;
+}
+.sound-option-desc {
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 10px;
+  color: rgba(255,255,255,0.5);
+  margin-top: 1px;
+}
+.sound-option-actions {
+  display: flex; gap: 6px;
+  flex-shrink: 0;
+}
+.sound-preview-btn,
+.sound-select-btn {
+  border: 1px solid rgba(255,255,255,0.2);
+  background: rgba(0,0,0,0.4);
+  color: #fff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 600;
+}
+.sound-preview-btn:hover {
+  border-color: #B47CFF;
+  background: rgba(180,124,255,0.15);
+}
+.sound-select-btn:hover {
+  border-color: #5EEAD4;
+  background: rgba(94,234,212,0.15);
+}
+.sound-option.active .sound-select-btn {
+  background: linear-gradient(135deg, #5EEAD4, #B47CFF);
+  border-color: transparent;
+  color: #0a0118;
+  font-weight: 900;
+}
+
+@media (max-width: 600px) {
+  .sound-options { grid-template-columns: 1fr; }
+  .sound-option { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .sound-option-actions { width: 100%; justify-content: flex-end; }
+}
