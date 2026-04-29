@@ -244,11 +244,30 @@
     <div class="sound-settings-body" id="soundSettingsBody"></div>
   </details>
 
+  <div class="retro-sale-bar">
+    <div class="retro-sale-info">
+      <span class="retro-sale-icon">🕒</span>
+      <div>
+        <div class="retro-sale-label">¿Llegó un pago tarde o de otro día?</div>
+        <div class="retro-sale-desc">Registra la venta a un día específico (después de las 6pm o de días anteriores) sin afectar el orden actual</div>
+      </div>
+    </div>
+    <button class="btn-retro" id="btnRetroSale">📅 Registrar venta de OTRO día</button>
+  </div>
+
   <div class="cp-grid" id="cpGrid"></div>
 
   <div class="cp-summary">
     <div class="cp-summary-head">◆ RANKING COMPLETO</div>
     <div id="cpSummaryBody"></div>
+  </div>
+
+  <div class="cp-earnings">
+    <div class="cp-earnings-head">
+      <div class="cp-earnings-title">💰 COMISIONES ACUMULADAS · A PAGAR</div>
+      <div class="cp-earnings-total" id="cpEarningsTotal">Total semana: $0</div>
+    </div>
+    <div id="cpEarningsBody"></div>
   </div>
 </div>
 
@@ -349,6 +368,166 @@ function renderAll() {
   renderControlPanel();
   renderDayButtons();
   renderSoundSettings();
+  renderEarningsTable();
+}
+
+// ============== Tabla de Comisiones Acumuladas ==============
+function renderEarningsTable() {
+  const host = document.getElementById('cpEarningsBody');
+  const totalHost = document.getElementById('cpEarningsTotal');
+  if (!host) return;
+
+  const board = getEarningsBoard();
+  const totalToPay = board.reduce((s, x) => s + x.earned, 0);
+  const grandTotalSales = board.reduce((s, x) => s + x.total, 0);
+
+  if (totalHost) {
+    totalHost.innerHTML = `Total semana: <strong>$${totalToPay} MXN</strong>${grandTotalSales > 0 ? ` · ${grandTotalSales} ventas` : ''}`;
+  }
+
+  if (board.every(b => b.earned === 0)) {
+    host.innerHTML = `
+      <div class="cp-earnings-empty">
+        Aún no hay comisiones acumuladas. Cuando reveles la comisión del día y los vendedores registren ventas, aparecerán aquí.
+      </div>
+    `;
+    return;
+  }
+
+  host.innerHTML = board.map((s, i) => {
+    const avg = s.total > 0 ? (s.earned / s.total).toFixed(1) : '0';
+    const cls = s.earned > 0 ? '' : 'zero';
+    return `
+      <div class="cp-earnings-row ${cls}" style="--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-40: ${s.color}66;">
+        <div class="cp-earnings-rank" style="color: ${s.color}; text-shadow: 0 0 8px ${s.color}">#${i + 1}</div>
+        <div class="cp-earnings-avatar">${avatarSVG(s.avatar, s.color, s.colorAlt, 32)}</div>
+        <div class="cp-earnings-name">${s.name}</div>
+        <div class="cp-earnings-sales">${s.total} <span>ventas</span></div>
+        <div class="cp-earnings-amount" style="color: ${s.color}; text-shadow: 0 0 10px ${s.color}">$${s.earned}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ============== Venta retroactiva ==============
+function showRetroSaleModal() {
+  // Obtener qué días tienen comisión revelada (esos son los elegibles)
+  const availableDays = WEEK_DAYS.filter(d => state.commission?.byDay?.[d]?.revealed);
+
+  if (availableDays.length === 0) {
+    alert('Para registrar una venta retroactiva, primero tiene que estar revelada la comisión de algún día.\n\nUsa los botones LUNES-SÁBADO arriba.');
+    return;
+  }
+
+  const overlay = document.createElement('div');
+  overlay.className = 'retro-modal-overlay';
+
+  const dayBtns = WEEK_DAYS.map(d => {
+    const ds = state.commission.byDay[d];
+    const isAvail = ds.revealed && ds.amount != null;
+    const text = isAvail
+      ? `${DAY_LABELS_ES[d]} · $${ds.amount}${ds.premium ? ' ★' : ''}`
+      : `${DAY_LABELS_ES[d]} · sin revelar`;
+    return `
+      <button class="retro-day-btn ${isAvail ? '' : 'disabled'}"
+              data-day="${d}" ${isAvail ? '' : 'disabled'}>
+        ${text}
+      </button>
+    `;
+  }).join('');
+
+  // Lista de páginas (consultoras) ordenadas por nombre del vendedor
+  const pageOptions = [];
+  SELLERS.forEach(s => {
+    s.pages.forEach(p => {
+      pageOptions.push({ page: p, sellerName: s.name, color: s.color });
+    });
+  });
+
+  const pageBtns = pageOptions.map(po => `
+    <button class="retro-page-btn" data-page="${po.page}" style="--accent: ${po.color}; --accent-40: ${po.color}66;">
+      <div class="retro-page-name">${po.page}</div>
+      <div class="retro-page-seller">${po.sellerName}</div>
+    </button>
+  `).join('');
+
+  overlay.innerHTML = `
+    <div class="retro-modal">
+      <button class="retro-modal-close" data-action="close">✕</button>
+      <div class="retro-modal-title">📅 Registrar venta de otro día</div>
+      <div class="retro-modal-subtitle">Para pagos que entraron después del horario o de días anteriores</div>
+
+      <div class="retro-step">
+        <div class="retro-step-label">1. Elige el día al que pertenece la venta:</div>
+        <div class="retro-days-grid">${dayBtns}</div>
+      </div>
+
+      <div class="retro-step retro-step-2 disabled" id="retroStep2">
+        <div class="retro-step-label">2. Elige la consultora / página:</div>
+        <div class="retro-pages-grid">${pageBtns}</div>
+      </div>
+
+      <div class="retro-modal-info">
+        <strong>Nota:</strong> La venta se registra normalmente (suma al total y comisión) pero NO dispara animaciones ni sonidos en la pantalla del Sales Arena.
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+
+  let selectedDay = null;
+
+  overlay.querySelectorAll('.retro-day-btn:not(.disabled)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      overlay.querySelectorAll('.retro-day-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      selectedDay = btn.dataset.day;
+      const step2 = overlay.querySelector('#retroStep2');
+      if (step2) step2.classList.remove('disabled');
+    });
+  });
+
+  overlay.querySelectorAll('.retro-page-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (!selectedDay) {
+        alert('Primero elige un día.');
+        return;
+      }
+      const page = btn.dataset.page;
+      const ds = state.commission.byDay[selectedDay];
+      if (!confirm(
+        `Confirmar venta retroactiva:\n\n` +
+        `📅 Día: ${DAY_LABELS_ES[selectedDay]}\n` +
+        `📄 Consultora: ${page}\n` +
+        `💰 Comisión a pagar: $${ds.amount}${ds.premium ? ' ★ premium' : ''}\n\n` +
+        `Esta venta sumará al total del vendedor y a su comisión acumulada.`
+      )) return;
+
+      // Calcular timestamp del día seleccionado (mediodía de hace X días)
+      const todayDayIndex = (new Date().getDay() + 6) % 7; // 0=Mon
+      const targetIndex = WEEK_DAYS.indexOf(selectedDay);
+      const daysAgo = todayDayIndex - targetIndex;
+      const ts = Date.now() - daysAgo * 24 * 60 * 60 * 1000;
+
+      // Llamar addSale con el día específico
+      addSale(page, ts, selectedDay);
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 400);
+    });
+  });
+
+  overlay.querySelector('[data-action="close"]').addEventListener('click', () => {
+    overlay.classList.remove('visible');
+    setTimeout(() => overlay.remove(), 400);
+  });
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      overlay.classList.remove('visible');
+      setTimeout(() => overlay.remove(), 400);
+    }
+  });
 }
 
 // ============== PANEL DE SONIDOS ==============
@@ -436,6 +615,7 @@ function previewSound(category, packId) {
 
 // ============== Botones ==============
 document.getElementById('btnUndo').addEventListener('click', undoLastSale);
+document.getElementById('btnRetroSale').addEventListener('click', showRetroSaleModal);
 
 let resetMode = false, resetTimer = null;
 const btnReset = document.getElementById('btnReset');

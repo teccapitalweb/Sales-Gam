@@ -1411,3 +1411,279 @@ button {
   .sound-option { flex-direction: column; align-items: flex-start; gap: 8px; }
   .sound-option-actions { width: 100%; justify-content: flex-end; }
 }
+
+/* ========================================================
+   COMISIONES ACUMULADAS A PAGAR (panel)
+   ======================================================== */
+.cp-earnings {
+  margin-top: 24px;
+  background: linear-gradient(135deg, rgba(20,8,40,0.6), rgba(35,15,65,0.6));
+  border: 1px solid rgba(255,217,61,0.3);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 0 20px rgba(255,217,61,0.08);
+}
+.cp-earnings-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  flex-wrap: wrap; gap: 10px;
+}
+.cp-earnings-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  color: #FFD93D;
+  text-shadow: 0 0 10px rgba(255,217,61,0.5);
+}
+.cp-earnings-total {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 0.12em;
+}
+.cp-earnings-total strong {
+  color: #5EEAD4;
+  text-shadow: 0 0 8px #5EEAD4;
+  font-family: var(--font-display);
+  font-size: 15px;
+}
+.cp-earnings-empty {
+  text-align: center;
+  padding: 20px 12px;
+  color: rgba(255,255,255,0.45);
+  font-size: 13px;
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+}
+.cp-earnings-row {
+  display: grid;
+  grid-template-columns: 36px 40px 1fr 80px 90px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.cp-earnings-row:last-child { border-bottom: none; }
+.cp-earnings-row.zero { opacity: 0.5; }
+.cp-earnings-rank {
+  font-family: var(--font-display); font-weight: 900; font-size: 14px;
+}
+.cp-earnings-name {
+  font-family: var(--font-display); font-weight: 700; font-size: 13px;
+  color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.cp-earnings-sales {
+  font-family: var(--font-display); font-weight: 900; font-size: 14px;
+  color: #fff; text-align: right;
+}
+.cp-earnings-sales span {
+  font-family: var(--font-mono); font-weight: 400;
+  font-size: 10px; color: rgba(255,255,255,0.5);
+  margin-left: 3px;
+}
+.cp-earnings-amount {
+  font-family: var(--font-display); font-weight: 900; font-size: 18px;
+  text-align: right; letter-spacing: 0.04em;
+}
+
+/* ========================================================
+   BARRA DE VENTA RETROACTIVA
+   ======================================================== */
+.retro-sale-bar {
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, rgba(94,234,212,0.08), rgba(180,124,255,0.08));
+  border: 1px dashed rgba(94,234,212,0.4);
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.retro-sale-info {
+  display: flex; align-items: center; gap: 12px;
+  flex: 1; min-width: 200px;
+}
+.retro-sale-icon {
+  font-size: 24px;
+  filter: drop-shadow(0 0 10px #5EEAD4);
+}
+.retro-sale-label {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 13px; color: #fff;
+  letter-spacing: 0.04em;
+}
+.retro-sale-desc {
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 11px; color: rgba(255,255,255,0.55);
+  margin-top: 2px;
+}
+.btn-retro {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #5EEAD4, #B47CFF);
+  border: none; border-radius: 8px;
+  font-family: var(--font-display); font-weight: 900; font-size: 12px;
+  letter-spacing: 0.12em; color: #0a0118;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(94,234,212,0.3);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-retro:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(94,234,212,0.5);
+}
+
+/* ========================================================
+   MODAL DE VENTA RETROACTIVA
+   ======================================================== */
+.retro-modal-overlay {
+  position: fixed; inset: 0; z-index: 240;
+  background: rgba(5, 0, 12, 0.92);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  transition: opacity 0.4s;
+  padding: 20px;
+}
+.retro-modal-overlay.visible { opacity: 1; }
+.retro-modal {
+  background: linear-gradient(135deg, rgba(20,8,40,0.95), rgba(40,15,80,0.95));
+  border: 1px solid rgba(94,234,212,0.4);
+  border-radius: 16px;
+  padding: 28px 32px;
+  max-width: 720px; width: 100%;
+  max-height: 85vh; overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 60px rgba(94,234,212,0.2);
+}
+.retro-modal-close {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 36px; height: 36px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.retro-modal-close:hover { border-color: #FF4FB6; color: #FF4FB6; }
+.retro-modal-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 22px;
+  letter-spacing: 0.06em;
+  color: #5EEAD4;
+  text-shadow: 0 0 14px #5EEAD4;
+  margin-bottom: 4px;
+}
+.retro-modal-subtitle {
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 12px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 20px;
+  letter-spacing: 0.03em;
+}
+.retro-step {
+  margin-bottom: 18px;
+  transition: opacity 0.3s;
+}
+.retro-step.disabled { opacity: 0.35; pointer-events: none; }
+.retro-step-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.65);
+  margin-bottom: 8px;
+}
+.retro-days-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+.retro-day-btn {
+  padding: 10px 12px;
+  background: rgba(20,8,40,0.5);
+  border: 2px solid rgba(180,124,255,0.3);
+  border-radius: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 12px;
+  color: #fff; letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.retro-day-btn:hover:not(.disabled) {
+  border-color: #5EEAD4;
+  background: rgba(94,234,212,0.12);
+}
+.retro-day-btn.selected {
+  border-color: #5EEAD4;
+  background: linear-gradient(135deg, rgba(94,234,212,0.25), rgba(20,8,40,0.5));
+  box-shadow: 0 0 14px rgba(94,234,212,0.4);
+}
+.retro-day-btn.disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  background: rgba(0,0,0,0.3);
+  border-color: rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.45);
+}
+.retro-pages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.retro-page-btn {
+  padding: 10px 12px;
+  background: rgba(20,8,40,0.5);
+  border: 2px solid var(--accent-40, rgba(180,124,255,0.3));
+  border-radius: 8px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.retro-page-btn:hover {
+  background: rgba(0,0,0,0.6);
+  border-color: var(--accent);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px var(--accent-40);
+}
+.retro-page-name {
+  font-family: var(--font-display); font-weight: 900; font-size: 13px;
+  color: var(--accent);
+  text-shadow: 0 0 6px var(--accent-40);
+}
+.retro-page-seller {
+  font-family: var(--font-mono); font-size: 10px;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+.retro-modal-info {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: rgba(255,217,61,0.08);
+  border: 1px solid rgba(255,217,61,0.3);
+  border-radius: 10px;
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 12px;
+  color: rgba(255,255,255,0.75);
+  line-height: 1.5;
+}
+.retro-modal-info strong { color: #FFD93D; }
+
+@media (max-width: 600px) {
+  .cp-earnings-row {
+    grid-template-columns: 30px 32px 1fr 60px 70px;
+    gap: 8px; padding: 6px 8px;
+  }
+  .cp-earnings-name { font-size: 11px; }
+  .cp-earnings-sales { font-size: 12px; }
+  .cp-earnings-amount { font-size: 15px; }
+  .retro-sale-bar { flex-direction: column; align-items: stretch; }
+  .btn-retro { width: 100%; }
+}

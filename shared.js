@@ -81,7 +81,7 @@ function getPageBreakdown(seller) {
 }
 
 // ============== Sales actions ==============
-function addSale(page) {
+function addSale(page, customTs) {
   const sellerId = SELLER_BY_PAGE[page];
   if (!sellerId) return;
 
@@ -91,7 +91,8 @@ function addSale(page) {
 
   state.sellers[sellerId] = beforeTotal + 1;
   state.pages[page]       = (state.pages[page] || 0) + 1;
-  state.history.push({ sellerId, page, ts: Date.now() });
+  const ts = customTs || Date.now();
+  state.history.push({ sellerId, page, ts, retroactive: !!customTs });
   if (state.history.length > 500) state.history.shift();
   saveState();
 
@@ -2050,14 +2051,25 @@ const Sounds = {
 
 // Hook el sonido a las ventas
 const _addSale_orig = addSale;
-addSale = function(page) {
+addSale = function(page, customTs, customDayKey) {
   const sellerId = SELLER_BY_PAGE[page];
-  // Aplicar comisión si hay una activa (el último día revelado)
-  _addSale_orig(page);
-  if (sellerId && getActiveCommission()) {
-    applyCommissionToSale(sellerId);
+  _addSale_orig(page, customTs);
+
+  if (sellerId) {
+    // Si es venta retroactiva con día específico, usar la comisión de ese día
+    // Si no hay comisión revelada para ese día, no se aplica nada
+    if (customDayKey && state.commission?.byDay?.[customDayKey]?.revealed) {
+      const dayCommission = state.commission.byDay[customDayKey];
+      state.commission.earned[sellerId] = (state.commission.earned[sellerId] || 0) + dayCommission.amount;
+      saveState();
+    } else if (!customDayKey && getActiveCommission()) {
+      // Venta normal de hoy: usar comisión activa
+      applyCommissionToSale(sellerId);
+    }
   }
-  Sounds.play && Sounds.sale();
+
+  // Solo reproducir sonido si NO es venta retroactiva
+  if (!customTs) Sounds.sale && Sounds.sale();
 };
 
 // Hook a fireEvent para sonidos
