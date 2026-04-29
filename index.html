@@ -58,17 +58,17 @@
 
 /* ============== PODIO ============== */
 .podium-wrap {
-  max-width: 1320px; margin: 0 auto;
+  max-width: 1600px; margin: 0 auto;
   position: relative; z-index: 3;
 }
 
 .podium {
   display: grid;
   grid-template-columns: repeat(9, 1fr);
-  gap: 8px;
+  gap: 12px;
   align-items: end;
-  height: clamp(500px, 72vh, 720px);
-  padding: 0 6px;
+  height: clamp(560px, 80vh, 880px);
+  padding: 0 12px;
 }
 
 /* ==============================================================
@@ -79,8 +79,8 @@
   display: flex; flex-direction: column;
   background: linear-gradient(180deg, rgba(20,8,40,0.5) 0%, rgba(10,1,24,0.85) 100%);
   border: 2px solid var(--accent-40, rgba(180,124,255,0.4));
-  border-radius: 14px 14px 10px 10px;
-  padding: 10px 8px 8px;
+  border-radius: 16px 16px 12px 12px;
+  padding: 14px 10px 10px;
   overflow: hidden;
   box-shadow: 0 0 30px var(--accent-15, rgba(180,124,255,0.2)),
               inset 0 1px 0 rgba(255,255,255,0.06);
@@ -108,27 +108,27 @@
 /* HEADER del pillar: rank + medalla */
 .pillar-head {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 2px; flex-shrink: 0;
+  margin-bottom: 4px; flex-shrink: 0;
   position: relative; z-index: 5;
 }
 .pillar-rank {
   font-family: var(--font-display); font-weight: 900;
-  font-size: 18px;
+  font-size: 22px;
   background: linear-gradient(180deg, var(--accent), var(--accent-alt));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 8px var(--accent));
   line-height: 1;
 }
-.pillar.is-leader .pillar-rank { font-size: 24px; }
+.pillar.is-leader .pillar-rank { font-size: 28px; }
 .pillar-medal {
-  font-size: 14px; filter: drop-shadow(0 0 6px var(--accent));
+  font-size: 16px; filter: drop-shadow(0 0 6px var(--accent));
 }
-.pillar.is-leader .pillar-medal { font-size: 18px; }
+.pillar.is-leader .pillar-medal { font-size: 20px; }
 
 .pillar-avatar {
   display: flex; align-items: center; justify-content: center;
-  margin: 2px 0 4px;
-  filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 20px var(--accent-55, rgba(180,124,255,0.55)));
+  margin: 4px 0 6px;
+  filter: drop-shadow(0 0 12px var(--accent)) drop-shadow(0 0 24px var(--accent-55, rgba(180,124,255,0.55)));
   animation: float-y 3.2s infinite ease-in-out;
   transform-origin: center;
   transform-style: preserve-3d;
@@ -147,7 +147,7 @@
 
 .pillar-name {
   font-family: var(--font-display); font-weight: 900;
-  font-size: 12px;
+  font-size: 14px;
   color: #fff;
   text-shadow: 0 0 12px var(--accent);
   text-align: center;
@@ -157,41 +157,41 @@
   position: relative; z-index: 5;
   flex-shrink: 0;
 }
-.pillar.is-leader .pillar-name { font-size: 16px; }
+.pillar.is-leader .pillar-name { font-size: 18px; }
 
 .pillar-tag {
-  font-family: var(--font-mono); font-size: 8px;
+  font-family: var(--font-mono); font-size: 9px;
   color: var(--accent); letter-spacing: 0.15em;
-  text-align: center; opacity: 0.85; margin-bottom: 4px;
+  text-align: center; opacity: 0.85; margin-bottom: 6px;
   position: relative; z-index: 5;
   flex-shrink: 0;
 }
-.pillar.is-leader .pillar-tag { font-size: 9px; }
+.pillar.is-leader .pillar-tag { font-size: 10px; }
 
 /* Desglose por consultora (chips) */
 .pillar-pages {
-  display: flex; flex-wrap: wrap; gap: 3px;
-  justify-content: center; margin-bottom: 6px;
+  display: flex; flex-wrap: wrap; gap: 4px;
+  justify-content: center; margin-bottom: 8px;
   position: relative; z-index: 5;
-  flex-shrink: 0; min-height: 18px;
+  flex-shrink: 0; min-height: 22px;
 }
 .pillar-pages-chip {
-  display: inline-flex; align-items: center; gap: 3px;
-  padding: 1px 6px;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px;
   background: rgba(0,0,0,0.5);
   border: 1px solid var(--accent-50, rgba(180,124,255,0.5));
   border-radius: 999px;
-  font-family: var(--font-mono); font-size: 8px;
+  font-family: var(--font-mono); font-size: 9px;
   color: rgba(255,255,255,0.85);
   letter-spacing: 0.03em;
   white-space: nowrap;
 }
 .pillar-pages-chip strong {
   color: var(--accent); font-weight: 900;
-  font-family: var(--font-display); font-size: 9px;
+  font-family: var(--font-display); font-size: 10px;
 }
-.pillar.is-leader .pillar-pages-chip { font-size: 9px; padding: 2px 7px; }
-.pillar.is-leader .pillar-pages-chip strong { font-size: 10px; }
+.pillar.is-leader .pillar-pages-chip { font-size: 10px; padding: 2px 8px; }
+.pillar.is-leader .pillar-pages-chip strong { font-size: 11px; }
 
 /* ============== BARRA VERTICAL — toma todo el espacio restante ============== */
 .bar-v {
@@ -199,11 +199,11 @@
   position: relative;
   width: 100%;
   background: rgba(0,0,0,0.55);
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
   overflow: hidden;
   box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
-  min-height: 180px;
+  min-height: 240px;
 }
 .bar-v-fill {
   position: absolute; bottom: 0; left: 0; right: 0;
@@ -237,16 +237,16 @@
 /* Número grande — sigue al fill de la barra */
 .bar-v-num {
   position: absolute; left: 0; right: 0;
-  bottom: min(calc(100% - 32px), calc(var(--fill-pct, 0) * 1% + 4px));
+  bottom: min(calc(100% - 38px), calc(var(--fill-pct, 0) * 1% + 6px));
   text-align: center;
   font-family: var(--font-display); font-weight: 900;
-  font-size: 18px; color: #fff;
+  font-size: 24px; color: #fff;
   text-shadow: 0 0 12px var(--accent), 0 0 20px var(--accent), 0 2px 4px rgba(0,0,0,0.9);
   letter-spacing: 0.04em;
   z-index: 3; pointer-events: none;
   transition: bottom 1s cubic-bezier(.34, 1.56, .64, 1), transform 0.3s;
 }
-.pillar.is-leader .bar-v-num { font-size: 24px; bottom: min(calc(100% - 38px), calc(var(--fill-pct, 0) * 1% + 4px)); }
+.pillar.is-leader .bar-v-num { font-size: 32px; bottom: min(calc(100% - 46px), calc(var(--fill-pct, 0) * 1% + 6px)); }
 .bar-v-num.bump { animation: bounce-pop 0.5s ease; }
 
 /* Marcas de progreso laterales (estilo gamer) */
@@ -344,7 +344,7 @@
       <div class="title-block">
         <div class="title-tag">TEC CAPITAL × IPCI</div>
         <h1 class="title-main">SALES ARENA</h1>
-        <div class="title-sub"><span class="live-dot"></span>EN VIVO · TOP 4 · META <span id="weekTargetSpan">85</span></div>
+        <div class="title-sub"><span class="live-dot"></span>EN VIVO · META <span id="weekTargetSpan">85</span></div>
       </div>
       <div class="hud-stat right">
         <div class="label">▸ HORA</div>
@@ -375,8 +375,10 @@ function renderLeaderboard() {
     const goalReached = s.total >= WEEK_TARGET;
     const isLeader = i === 0 && s.total > 0;
 
-    // Altura escalonada: rank 0 = 100%, decrece 4% por posición
-    const heightPct = 100 - i * 4;
+    // Altura: si todos están en 0, todos del mismo tamaño.
+    // Si ya hay ventas, escalonado sutil (2% por posición)
+    const allZero = total === 0;
+    const heightPct = allZero ? 100 : (100 - i * 2);
 
     const accentVars = `--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-15: ${s.color}26; --accent-30: ${s.color}4d; --accent-40: ${s.color}66; --accent-50: ${s.color}80; --accent-55: ${s.color}8c; --accent-80: ${s.color}cc; --fill-pct: ${pct}; --pillar-h: ${heightPct}%;`;
 
@@ -396,13 +398,13 @@ function renderLeaderboard() {
       Array.from({ length: 10 }, (_, k) => `<span class="${k % 5 === 4 ? 'major' : ''}"></span>`).join('')
     }</div>`;
 
-    // Medalla solo top 4
-    const medalIcon = i < 4 ? RANK_MEDALS[i] : '';
-    // Tag solo top 4
-    const tagText = i < 4 ? RANK_LABELS[i] : `RANK ${i + 1}`;
+    // Medalla solo top 4 (con ventas reales)
+    const medalIcon = (!allZero && i < 4) ? RANK_MEDALS[i] : '';
+    // Tag
+    const tagText = (!allZero && i < 4) ? RANK_LABELS[i] : `RANK ${i + 1}`;
 
     // Avatar size: leader más grande
-    const avatarSize = isLeader ? 70 : 56;
+    const avatarSize = isLeader ? 80 : 64;
 
     const el = document.createElement('div');
     el.className = `pillar` + (isLeader ? ' is-leader' : '') + (goalReached ? ' goal-reached' : '');
