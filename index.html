@@ -64,8 +64,8 @@
 
 .podium {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 8px;
   align-items: end;
   height: clamp(500px, 72vh, 720px);
   padding: 0 6px;
@@ -79,18 +79,14 @@
   display: flex; flex-direction: column;
   background: linear-gradient(180deg, rgba(20,8,40,0.5) 0%, rgba(10,1,24,0.85) 100%);
   border: 2px solid var(--accent-40, rgba(180,124,255,0.4));
-  border-radius: 18px 18px 12px 12px;
-  padding: 14px 12px 10px;
+  border-radius: 14px 14px 10px 10px;
+  padding: 10px 8px 8px;
   overflow: hidden;
   box-shadow: 0 0 30px var(--accent-15, rgba(180,124,255,0.2)),
               inset 0 1px 0 rgba(255,255,255,0.06);
   transition: all 0.5s cubic-bezier(.5, 1.5, .5, 1);
+  height: var(--pillar-h, 100%);
 }
-
-.pillar.rank-0 { height: 100%; }
-.pillar.rank-1 { height: 92%; }
-.pillar.rank-2 { height: 84%; }
-.pillar.rank-3 { height: 76%; }
 
 .pillar.glow { animation: climb-flash 0.9s ease; }
 
@@ -99,40 +95,40 @@
   animation: goal-reached-pulse 2s infinite ease-in-out;
 }
 
-.pillar.rank-0::before {
+.pillar.is-leader::before {
   content: '';
   position: absolute; top: -2px; left: -2px; right: -2px; height: 4px;
   background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
   background-size: 200% 100%;
   animation: shimmer 3s linear infinite;
-  border-radius: 18px 18px 0 0;
+  border-radius: 14px 14px 0 0;
   z-index: 5;
 }
 
 /* HEADER del pillar: rank + medalla */
 .pillar-head {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 4px; flex-shrink: 0;
+  margin-bottom: 2px; flex-shrink: 0;
   position: relative; z-index: 5;
 }
 .pillar-rank {
   font-family: var(--font-display); font-weight: 900;
-  font-size: 24px;
+  font-size: 18px;
   background: linear-gradient(180deg, var(--accent), var(--accent-alt));
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
   filter: drop-shadow(0 0 8px var(--accent));
   line-height: 1;
 }
-.pillar.rank-0 .pillar-rank { font-size: 32px; }
+.pillar.is-leader .pillar-rank { font-size: 24px; }
 .pillar-medal {
-  font-size: 18px; filter: drop-shadow(0 0 6px var(--accent));
+  font-size: 14px; filter: drop-shadow(0 0 6px var(--accent));
 }
-.pillar.rank-0 .pillar-medal { font-size: 22px; }
+.pillar.is-leader .pillar-medal { font-size: 18px; }
 
 .pillar-avatar {
   display: flex; align-items: center; justify-content: center;
-  margin: 2px 0 6px;
-  filter: drop-shadow(0 0 12px var(--accent)) drop-shadow(0 0 24px var(--accent-55, rgba(180,124,255,0.55)));
+  margin: 2px 0 4px;
+  filter: drop-shadow(0 0 10px var(--accent)) drop-shadow(0 0 20px var(--accent-55, rgba(180,124,255,0.55)));
   animation: float-y 3.2s infinite ease-in-out;
   transform-origin: center;
   transform-style: preserve-3d;
@@ -145,57 +141,57 @@
 .pillar-avatar.bounce {
   animation: bounce-pop 0.55s cubic-bezier(.5, 1.5, .5, 1), float-y 3.2s 0.55s infinite ease-in-out;
 }
-.pillar.rank-0 .pillar-avatar {
+.pillar.is-leader .pillar-avatar {
   animation: float-y 3.2s infinite ease-in-out, wobble 4s 1s infinite ease-in-out;
 }
 
 .pillar-name {
   font-family: var(--font-display); font-weight: 900;
-  font-size: 15px;
+  font-size: 12px;
   color: #fff;
   text-shadow: 0 0 12px var(--accent);
   text-align: center;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   margin-bottom: 2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   position: relative; z-index: 5;
   flex-shrink: 0;
 }
-.pillar.rank-0 .pillar-name { font-size: 19px; }
+.pillar.is-leader .pillar-name { font-size: 16px; }
 
 .pillar-tag {
-  font-family: var(--font-mono); font-size: 9px;
-  color: var(--accent); letter-spacing: 0.2em;
-  text-align: center; opacity: 0.85; margin-bottom: 6px;
+  font-family: var(--font-mono); font-size: 8px;
+  color: var(--accent); letter-spacing: 0.15em;
+  text-align: center; opacity: 0.85; margin-bottom: 4px;
   position: relative; z-index: 5;
   flex-shrink: 0;
 }
-.pillar.rank-0 .pillar-tag { font-size: 10px; }
+.pillar.is-leader .pillar-tag { font-size: 9px; }
 
 /* Desglose por consultora (chips) */
 .pillar-pages {
-  display: flex; flex-wrap: wrap; gap: 4px;
-  justify-content: center; margin-bottom: 8px;
+  display: flex; flex-wrap: wrap; gap: 3px;
+  justify-content: center; margin-bottom: 6px;
   position: relative; z-index: 5;
-  flex-shrink: 0; min-height: 22px;
+  flex-shrink: 0; min-height: 18px;
 }
 .pillar-pages-chip {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 2px 8px;
+  display: inline-flex; align-items: center; gap: 3px;
+  padding: 1px 6px;
   background: rgba(0,0,0,0.5);
   border: 1px solid var(--accent-50, rgba(180,124,255,0.5));
   border-radius: 999px;
-  font-family: var(--font-mono); font-size: 9px;
+  font-family: var(--font-mono); font-size: 8px;
   color: rgba(255,255,255,0.85);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
   white-space: nowrap;
 }
 .pillar-pages-chip strong {
   color: var(--accent); font-weight: 900;
-  font-family: var(--font-display); font-size: 11px;
+  font-family: var(--font-display); font-size: 9px;
 }
-.pillar.rank-0 .pillar-pages-chip { font-size: 10px; padding: 3px 9px; }
-.pillar.rank-0 .pillar-pages-chip strong { font-size: 12px; }
+.pillar.is-leader .pillar-pages-chip { font-size: 9px; padding: 2px 7px; }
+.pillar.is-leader .pillar-pages-chip strong { font-size: 10px; }
 
 /* ============== BARRA VERTICAL — toma todo el espacio restante ============== */
 .bar-v {
@@ -203,69 +199,72 @@
   position: relative;
   width: 100%;
   background: rgba(0,0,0,0.55);
-  border-radius: 10px;
+  border-radius: 8px;
   border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
   overflow: hidden;
   box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
-  min-height: 240px;
+  min-height: 180px;
 }
 .bar-v-fill {
   position: absolute; bottom: 0; left: 0; right: 0;
   background: linear-gradient(0deg, var(--accent-alt) 0%, var(--accent) 50%, var(--accent-alt) 100%);
   background-size: 100% 200%;
   animation: shimmer 2.5s linear infinite, bar-glow-pulse 2s infinite ease-in-out;
-  border-radius: 10px;
+  border-radius: 8px;
   transition: height 1s cubic-bezier(.34, 1.56, .64, 1);
   height: 0%;
 }
 .bar-v-fill::before {
   content: ''; position: absolute; left: 2px; top: 0; bottom: 0; width: 30%;
   background: linear-gradient(90deg, rgba(255,255,255,0.4), transparent);
-  border-radius: 10px;
+  border-radius: 8px;
   pointer-events: none;
 }
 .bar-v-fill::after {
   content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px;
   background: rgba(255,255,255,0.85);
   box-shadow: 0 0 12px #fff;
-  border-radius: 10px 10px 0 0;
+  border-radius: 8px 8px 0 0;
 }
 .bar-v-ticks {
   position: absolute; inset: 0;
   background-image: repeating-linear-gradient(0deg,
-    transparent 0, transparent 22px,
-    rgba(255,255,255,0.06) 22px, rgba(255,255,255,0.06) 24px);
+    transparent 0, transparent 20px,
+    rgba(255,255,255,0.06) 20px, rgba(255,255,255,0.06) 22px);
   pointer-events: none;
 }
 
-/* Marca de meta semanal (línea horizontal en el "tope") */
-.bar-v-target {
-  position: absolute; left: -2px; right: -2px; top: 0;
-  height: 2px;
-  background: rgba(255, 217, 61, 0.5);
-  pointer-events: none;
-  z-index: 2;
-}
-.bar-v-target::after {
-  content: 'META';
-  position: absolute; right: 4px; top: -16px;
-  font-family: var(--font-mono); font-size: 9px;
-  color: rgba(255, 217, 61, 0.7); letter-spacing: 0.2em;
-}
-
-/* Número grande arriba de la barra */
+/* Número grande — sigue al fill de la barra */
 .bar-v-num {
-  position: absolute; left: 0; right: 0; top: 8px;
+  position: absolute; left: 0; right: 0;
+  bottom: min(calc(100% - 32px), calc(var(--fill-pct, 0) * 1% + 4px));
   text-align: center;
   font-family: var(--font-display); font-weight: 900;
-  font-size: 26px; color: #fff;
-  text-shadow: 0 0 10px var(--accent), 0 2px 4px rgba(0,0,0,0.9);
+  font-size: 18px; color: #fff;
+  text-shadow: 0 0 12px var(--accent), 0 0 20px var(--accent), 0 2px 4px rgba(0,0,0,0.9);
   letter-spacing: 0.04em;
   z-index: 3; pointer-events: none;
-  transition: transform 0.3s;
+  transition: bottom 1s cubic-bezier(.34, 1.56, .64, 1), transform 0.3s;
 }
-.pillar.rank-0 .bar-v-num { font-size: 36px; }
+.pillar.is-leader .bar-v-num { font-size: 24px; bottom: min(calc(100% - 38px), calc(var(--fill-pct, 0) * 1% + 4px)); }
 .bar-v-num.bump { animation: bounce-pop 0.5s ease; }
+
+/* Marcas de progreso laterales (estilo gamer) */
+.bar-v-scale {
+  position: absolute; left: 3px; top: 0; bottom: 0;
+  width: 10px;
+  display: flex; flex-direction: column-reverse;
+  justify-content: space-between;
+  padding: 4px 0;
+  pointer-events: none;
+  z-index: 1;
+}
+.bar-v-scale span {
+  display: block; height: 1px;
+  background: rgba(255,255,255,0.2);
+  width: 100%;
+}
+.bar-v-scale span.major { height: 2px; background: rgba(255,255,255,0.35); }
 
 /* Sparks */
 .bar-v-sparks { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
@@ -313,20 +312,21 @@
 
 /* Mobile */
 @media (max-width: 900px) {
-  .lb-wrap { padding: 12px 8px 24px; }
+  .lb-wrap { padding: 12px 6px 24px; }
   .lb-header { grid-template-columns: 1fr; gap: 10px; text-align: center; }
   .hud-stat.right { text-align: center; }
-  .podium { gap: 8px; height: clamp(420px, 70vh, 560px); padding: 0 4px; }
-  .pillar { padding: 10px 6px 8px; }
-  .pillar-rank { font-size: 18px; }
-  .pillar.rank-0 .pillar-rank { font-size: 24px; }
-  .pillar-name { font-size: 11px; }
-  .pillar.rank-0 .pillar-name { font-size: 13px; }
-  .pillar-tag { font-size: 7px; letter-spacing: 0.12em; }
-  .pillar-pages-chip { font-size: 8px; padding: 1px 6px; }
-  .bar-v-num { font-size: 16px; top: 4px; }
-  .pillar.rank-0 .bar-v-num { font-size: 22px; }
-  .bench-chip { font-size: 10px; padding: 2px 8px; }
+  .podium { gap: 4px; height: clamp(380px, 60vh, 480px); padding: 0 2px; }
+  .pillar { padding: 6px 4px 6px; border-radius: 8px 8px 6px 6px; }
+  .pillar-rank { font-size: 12px; }
+  .pillar.is-leader .pillar-rank { font-size: 16px; }
+  .pillar-medal { font-size: 10px; }
+  .pillar-name { font-size: 9px; }
+  .pillar.is-leader .pillar-name { font-size: 11px; }
+  .pillar-tag { font-size: 6px; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .pillar-pages { display: none; } /* No hay espacio en móvil */
+  .bar-v-num { font-size: 12px; }
+  .pillar.is-leader .bar-v-num { font-size: 16px; }
+  .bar-v-scale { display: none; }
 }
 </style>
 </head>
@@ -361,22 +361,24 @@
 
 <script src="./shared.js"></script>
 <script>
-// ============== Render Podium ==============
+// ============== Render Podium con los 9 vendedores ==============
 function renderLeaderboard() {
   const ranked = getRanked();
-  const top4 = ranked.slice(0, 4);
   const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
   document.getElementById('totalSales').textContent = total;
 
   const podium = document.getElementById('podium');
   podium.innerHTML = '';
 
-  top4.forEach((s, i) => {
+  ranked.forEach((s, i) => {
     const pct = Math.min(100, (s.total / WEEK_TARGET) * 100);
-    const isFirst = i === 0;
     const goalReached = s.total >= WEEK_TARGET;
-    const accentVars = `--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-15: ${s.color}26; --accent-30: ${s.color}4d; --accent-40: ${s.color}66; --accent-50: ${s.color}80; --accent-55: ${s.color}8c; --accent-80: ${s.color}cc;`;
-    const isLeader = isFirst && s.total > 0;
+    const isLeader = i === 0 && s.total > 0;
+
+    // Altura escalonada: rank 0 = 100%, decrece 4% por posición
+    const heightPct = 100 - i * 4;
+
+    const accentVars = `--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-15: ${s.color}26; --accent-30: ${s.color}4d; --accent-40: ${s.color}66; --accent-50: ${s.color}80; --accent-55: ${s.color}8c; --accent-80: ${s.color}cc; --fill-pct: ${pct}; --pillar-h: ${heightPct}%;`;
 
     // Páginas con desglose si tiene 2+
     let pagesHtml = '';
@@ -389,8 +391,21 @@ function renderLeaderboard() {
       pagesHtml = `<div class="pillar-pages"></div>`;
     }
 
+    // Escala visual de progreso (10 marcas)
+    const scaleHtml = `<div class="bar-v-scale">${
+      Array.from({ length: 10 }, (_, k) => `<span class="${k % 5 === 4 ? 'major' : ''}"></span>`).join('')
+    }</div>`;
+
+    // Medalla solo top 4
+    const medalIcon = i < 4 ? RANK_MEDALS[i] : '';
+    // Tag solo top 4
+    const tagText = i < 4 ? RANK_LABELS[i] : `RANK ${i + 1}`;
+
+    // Avatar size: leader más grande
+    const avatarSize = isLeader ? 70 : 56;
+
     const el = document.createElement('div');
-    el.className = `pillar rank-${i}` + (goalReached ? ' goal-reached' : '');
+    el.className = `pillar` + (isLeader ? ' is-leader' : '') + (goalReached ? ' goal-reached' : '');
     el.dataset.sellerId = s.id;
     el.style.cssText = accentVars;
 
@@ -402,44 +417,28 @@ function renderLeaderboard() {
 
       <div class="pillar-head">
         <div class="pillar-rank">#${i + 1}</div>
-        <div class="pillar-medal">${RANK_MEDALS[i]}${goalReached ? ' 🎯' : ''}</div>
+        <div class="pillar-medal">${medalIcon}${goalReached ? ' 🎯' : ''}</div>
       </div>
 
       <div class="pillar-avatar" data-avatar>
-        ${avatarSVG(s.avatar, s.color, s.colorAlt, isFirst ? 100 : 78)}
+        ${avatarSVG(s.avatar, s.color, s.colorAlt, avatarSize)}
       </div>
 
       <div class="pillar-name">${s.name}</div>
-      <div class="pillar-tag">[ ${RANK_LABELS[i]} ]${isLeader ? ' ◆ LEADER' : ''}</div>
+      <div class="pillar-tag">[ ${tagText} ]${isLeader ? ' ◆' : ''}</div>
 
       ${pagesHtml}
 
       <div class="bar-v">
-        <div class="bar-v-num">${s.total}</div>
+        ${scaleHtml}
         <div class="bar-v-fill" style="height: ${pct}%"></div>
         <div class="bar-v-ticks"></div>
         <div class="bar-v-sparks"></div>
+        <div class="bar-v-num">${s.total}</div>
       </div>
     `;
     podium.appendChild(el);
   });
-
-  // Bench
-  const benchHost = document.getElementById('benchHost');
-  if (ranked.length > 4) {
-    benchHost.innerHTML = `
-      <div class="bench">
-        <div class="bench-label">▾ BANCA</div>
-        ${ranked.slice(4).map((s, i) => `
-          <div class="bench-chip" style="--accent: ${s.color}; --accent-15: ${s.color}30; --accent-40: ${s.color}66;">
-            <span class="bench-chip-rank">#${i + 5}</span>
-            ${s.name}
-            <span class="bench-chip-num">${s.total}</span>
-          </div>`).join('')}
-      </div>`;
-  } else {
-    benchHost.innerHTML = '';
-  }
 }
 
 function renderAll() {
