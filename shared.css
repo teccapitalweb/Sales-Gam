@@ -1118,3 +1118,139 @@ button {
   .live-lb-name { font-size: 11px; }
   .reveal-amount { font-size: clamp(60px, 18vw, 120px); }
 }
+
+/* ========================================================
+   BOTONES DE COMISIÓN POR DÍA (Lun-Sab)
+   ======================================================== */
+.day-buttons-wrap {
+  margin-bottom: 24px;
+  background: linear-gradient(135deg, rgba(20,8,40,0.6), rgba(35,15,65,0.6));
+  border: 1px solid rgba(180,124,255,0.3);
+  border-radius: 14px;
+  padding: 16px;
+}
+.day-buttons-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 14px;
+  letter-spacing: 0.2em;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(255,79,182,0.6);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.day-buttons-title .premium-badge {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.18em;
+  color: #FF4FB6;
+  text-shadow: 0 0 8px #FF4FB6;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,79,182,0.4);
+  border-radius: 999px;
+  font-weight: 700;
+}
+.day-buttons-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+}
+.day-btn {
+  position: relative;
+  background: rgba(20,8,40,0.7);
+  border: 2px solid rgba(180,124,255,0.3);
+  border-radius: 12px;
+  padding: 14px 10px;
+  font-family: var(--font-display);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+}
+.day-btn:hover {
+  border-color: #B47CFF;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(180,124,255,0.3);
+}
+.day-btn-day {
+  font-weight: 900;
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: rgba(255,255,255,0.85);
+}
+.day-btn-amount {
+  font-weight: 900;
+  font-size: 18px;
+  color: rgba(180,124,255,0.7);
+  letter-spacing: 0.04em;
+  font-family: var(--font-display);
+}
+.day-btn-tag {
+  position: absolute;
+  top: 4px; right: 6px;
+  font-family: var(--font-mono); font-size: 8px;
+  letter-spacing: 0.2em;
+  color: #5EEAD4;
+  background: rgba(94,234,212,0.15);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(94,234,212,0.4);
+}
+
+/* Estado: revelado (normal $12-$24) */
+.day-btn.revealed {
+  background: linear-gradient(180deg, rgba(94,234,212,0.15) 0%, rgba(20,8,40,0.7) 100%);
+  border-color: #5EEAD4;
+  box-shadow: 0 0 20px rgba(94,234,212,0.2);
+}
+.day-btn.revealed .day-btn-day { color: #5EEAD4; }
+.day-btn.revealed .day-btn-amount {
+  color: #fff;
+  text-shadow: 0 0 14px #5EEAD4;
+  font-size: 22px;
+}
+
+/* Estado: revelado PREMIUM */
+.day-btn.revealed.premium {
+  background: linear-gradient(180deg, rgba(255,217,61,0.18) 0%, rgba(20,8,40,0.7) 100%);
+  border-color: #FFD93D;
+  box-shadow: 0 0 28px rgba(255,217,61,0.4);
+  animation: bar-glow-pulse 2.5s infinite ease-in-out;
+}
+.day-btn.revealed.premium .day-btn-day {
+  background: linear-gradient(180deg, #FFD93D, #FF8C42);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.day-btn.revealed.premium .day-btn-amount {
+  color: #fff;
+  text-shadow: 0 0 16px #FFD93D, 0 0 30px #FF8C42;
+  font-size: 22px;
+}
+
+/* Estado: hoy */
+.day-btn.is-today {
+  border-width: 2px;
+}
+.day-btn.is-today:not(.revealed) {
+  border-color: rgba(255,79,182,0.6);
+  box-shadow: 0 0 20px rgba(255,79,182,0.25);
+  animation: today-pulse 2s infinite ease-in-out;
+}
+@keyframes today-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,79,182,0.25); }
+  50% { box-shadow: 0 0 36px rgba(255,79,182,0.5); }
+}
+
+@media (max-width: 800px) {
+  .day-buttons-row { grid-template-columns: repeat(3, 1fr); }
+  .day-btn { min-height: 80px; padding: 10px 6px; }
+  .day-btn-day { font-size: 11px; }
+  .day-btn-amount { font-size: 16px; }
+}

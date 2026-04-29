@@ -33,12 +33,14 @@ let prevLeader = null;
 function buildInitialState() {
   const sellers = {}, pages = {};
   SELLERS.forEach(s => { sellers[s.id] = 0; s.pages.forEach(p => { pages[p] = 0; }); });
+  const byDay = {};
+  ['monday','tuesday','wednesday','thursday','friday','saturday'].forEach(d => {
+    byDay[d] = { amount: null, premium: false, revealed: false, revealedAt: null };
+  });
   return {
     sellers, pages, history: [], weekStarted: Date.now(),
     commission: {
-      todayDate: null,
-      todayAmount: null,
-      todayPremium: false,
+      byDay,
       month: null,
       premiumUsedThisMonth: 0,
       earned: {}
@@ -53,13 +55,15 @@ function loadState() {
     const p = JSON.parse(raw);
     if (!p.sellers || !p.pages) return buildInitialState();
     if (!p.weekStarted) p.weekStarted = Date.now();
-    // Asegurar que commission siempre exista
-    if (!p.commission) {
-      p.commission = {
-        todayDate: null, todayAmount: null, todayPremium: false,
-        month: null, premiumUsedThisMonth: 0, earned: {}
-      };
-    }
+    // Asegurar que commission siempre exista con la nueva estructura
+    if (!p.commission) p.commission = { byDay: {}, month: null, premiumUsedThisMonth: 0, earned: {} };
+    if (!p.commission.byDay) p.commission.byDay = {};
+    ['monday','tuesday','wednesday','thursday','friday','saturday'].forEach(d => {
+      if (!p.commission.byDay[d]) {
+        p.commission.byDay[d] = { amount: null, premium: false, revealed: false, revealedAt: null };
+      }
+    });
+    if (!p.commission.earned) p.commission.earned = {};
     return p;
   } catch (e) { return buildInitialState(); }
 }
@@ -1081,18 +1085,39 @@ function getBestStreakOfWeek() {
 const COMMISSION_KEY  = 'sales-arena-commission-v3';
 const COMMISSION_REVEAL_KEY = 'sales-arena-commission-reveal-v3';
 
-// Inicializar commission state si no existe
-if (!state.commission) {
-  state.commission = {
-    todayDate: null,           // YYYY-MM-DD del último roll
-    todayAmount: null,         // monto actual ($12-$30)
-    todayPremium: false,       // si hoy fue premium
-    month: null,               // YYYY-MM
-    premiumUsedThisMonth: 0,   // cuántas premium se han dado este mes
-    earned: {}                 // { sellerId: total $ acumulado }
-  };
-  saveState();
+// Días de la semana laborable (Lun-Sab)
+const WEEK_DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday'];
+const DAY_LABELS_ES = {
+  monday: 'LUNES', tuesday: 'MARTES', wednesday: 'MIÉRCOLES',
+  thursday: 'JUEVES', friday: 'VIERNES', saturday: 'SÁBADO'
+};
+
+// Inicializar / migrar state de commission
+function ensureCommissionState() {
+  if (!state.commission) {
+    state.commission = {
+      byDay: {},
+      month: null,
+      premiumUsedThisMonth: 0,
+      earned: {}
+    };
+  }
+  if (!state.commission.byDay) state.commission.byDay = {};
+  WEEK_DAYS.forEach(d => {
+    if (!state.commission.byDay[d]) {
+      state.commission.byDay[d] = {
+        amount: null, premium: false, revealed: false, revealedAt: null
+      };
+    }
+  });
+  if (!state.commission.earned) state.commission.earned = {};
+  // Cleanup de keys legacy
+  delete state.commission.todayDate;
+  delete state.commission.todayAmount;
+  delete state.commission.todayPremium;
 }
+ensureCommissionState();
+saveState();
 
 // === Helpers de fecha ===
 function todayStr() {
@@ -1101,9 +1126,9 @@ function todayStr() {
 }
 function monthStr() { return todayStr().slice(0, 7); }
 
-// === Roll de comisión inteligente ===
-function rollCommissionForToday() {
-  const today = todayStr();
+// === Roll de comisión inteligente para un día específico ===
+function rollCommissionForDay(day, forceReroll = false) {
+  ensureCommissionState();
   const month = monthStr();
 
   // Reset al cambiar de mes
@@ -1112,39 +1137,65 @@ function rollCommissionForToday() {
     state.commission.premiumUsedThisMonth = 0;
   }
 
-  // Si ya se rolló hoy, devolver el actual sin cambios
-  if (state.commission.todayDate === today && state.commission.todayAmount != null) {
+  const dayState = state.commission.byDay[day];
+
+  // Si ya está revelado y no forzamos re-roll, devolver el actual
+  if (dayState.revealed && dayState.amount != null && !forceReroll) {
     return {
-      amount: state.commission.todayAmount,
-      premium: state.commission.todayPremium,
+      day,
+      amount: dayState.amount,
+      premium: dayState.premium,
       alreadyRolled: true
     };
   }
 
-  // Calcular probabilidad inteligente de premium
+  // Si forzamos re-roll y era premium, devolver esa premium al pool
+  if (forceReroll && dayState.premium && state.commission.premiumUsedThisMonth > 0) {
+    state.commission.premiumUsedThisMonth -= 1;
+  }
+
+  // Probabilidad inteligente:
+  // Quedan N rolls posibles este mes (días restantes × 6/7)
+  // Y M premium restantes. Probabilidad ≈ M/N
   const date = new Date();
   const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const daysLeft  = totalDays - date.getDate() + 1;
+  const rollsLeftEstimate = Math.max(1, Math.round(daysLeft * 6 / 7));
   const premiumLeft = Math.max(0, 5 - (state.commission.premiumUsedThisMonth || 0));
 
   let premiumChance = 0;
-  if (premiumLeft > 0 && daysLeft > 0) {
-    premiumChance = premiumLeft / daysLeft;
-    premiumChance = Math.max(0.06, Math.min(0.55, premiumChance));
+  if (premiumLeft > 0) {
+    premiumChance = premiumLeft / rollsLeftEstimate;
+    premiumChance = Math.max(0.06, Math.min(0.6, premiumChance));
   }
 
   const isPremium = premiumLeft > 0 && Math.random() < premiumChance;
   const amount = isPremium
-    ? 25 + Math.floor(Math.random() * 6)   // 25-30
-    : 12 + Math.floor(Math.random() * 13); // 12-24
+    ? 25 + Math.floor(Math.random() * 6)   // 25–30
+    : 12 + Math.floor(Math.random() * 13); // 12–24
 
-  state.commission.todayDate = today;
-  state.commission.todayAmount = amount;
-  state.commission.todayPremium = isPremium;
+  state.commission.byDay[day] = {
+    amount, premium: isPremium, revealed: true, revealedAt: Date.now()
+  };
   if (isPremium) state.commission.premiumUsedThisMonth += 1;
   saveState();
 
-  return { amount, premium: isPremium, alreadyRolled: false };
+  return { day, amount, premium: isPremium, alreadyRolled: false };
+}
+
+// === Comisión activa = la del último día revelado ===
+function getActiveCommission() {
+  ensureCommissionState();
+  let latest = null;
+  WEEK_DAYS.forEach(d => {
+    const ds = state.commission.byDay[d];
+    if (ds.revealed && ds.amount != null) {
+      if (!latest || (ds.revealedAt || 0) > (latest.revealedAt || 0)) {
+        latest = { day: d, ...ds };
+      }
+    }
+  });
+  return latest;
 }
 
 // === Acumulado por vendedor ===
@@ -1156,17 +1207,20 @@ function getEarningsBoard() {
   })).sort((a, b) => (b.earned - a.earned) || a.name.localeCompare(b.name));
 }
 
-// === Hook al hacer una venta: sumar comisión ===
+// === Hook al hacer una venta: sumar comisión activa ===
 function applyCommissionToSale(sellerId) {
-  if (!state.commission.todayAmount) return;
-  state.commission.earned[sellerId] = (state.commission.earned[sellerId] || 0) + state.commission.todayAmount;
+  const active = getActiveCommission();
+  if (!active) return;
+  state.commission.earned[sellerId] = (state.commission.earned[sellerId] || 0) + active.amount;
   saveState();
 }
 
-// === Disparar revelación cross-tab (la contadora pica el botón) ===
-function triggerCommissionReveal() {
-  const result = rollCommissionForToday();
+// === Disparar revelación cross-tab ===
+function triggerCommissionReveal(day, forceReroll = false) {
+  const result = rollCommissionForDay(day, forceReroll);
   const data = {
+    day: result.day,
+    dayLabel: DAY_LABELS_ES[result.day] || result.day.toUpperCase(),
     amount: result.amount,
     premium: result.premium,
     alreadyRolled: result.alreadyRolled,
@@ -1671,9 +1725,9 @@ const Sounds = {
 const _addSale_orig = addSale;
 addSale = function(page) {
   const sellerId = SELLER_BY_PAGE[page];
-  // Aplicar comisión si está rolada
+  // Aplicar comisión si hay una activa (el último día revelado)
   _addSale_orig(page);
-  if (sellerId && state.commission.todayAmount) {
+  if (sellerId && getActiveCommission()) {
     applyCommissionToSale(sellerId);
   }
   Sounds.play && Sounds.sale();
@@ -1707,7 +1761,7 @@ function showCommissionReveal(data) {
       <div class="shape square"></div>
     </div>
     <div class="reveal-content">
-      <div class="reveal-tag">▸ COMISIÓN DEL DÍA ◂</div>
+      <div class="reveal-tag">▸ COMISIÓN DEL ${data.dayLabel || 'DÍA'} ◂</div>
       <div class="reveal-amount" id="revealAmount">$??</div>
       <div class="reveal-status" id="revealStatus">EL JEFE LO ESTÁ DECIDIENDO...</div>
       <div class="reveal-message" id="revealMessage">PREPÁRATE · ESTO VIENE FUERTE</div>

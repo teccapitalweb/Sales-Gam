@@ -214,7 +214,6 @@
     </div>
     <div class="cp-actions">
       <a href="./index.html" target="_blank" class="btn-ghost">▶ ABRIR ARENA</a>
-      <button class="btn-reveal" id="btnReveal">💰 REVELAR COMISIÓN DEL DÍA</button>
       <button class="btn-week" id="btnWeek">🏁 CERRAR SEMANA</button>
       <button class="btn-ghost" id="btnUndo">↩ DESHACER</button>
       <button class="btn-danger" id="btnReset">⟳ RESET</button>
@@ -224,9 +223,14 @@
   <div class="cp-stats" id="cpStats"></div>
 
   <div class="cp-info-banner">
-    💡 <strong>Tip:</strong> Pulsa <em>"REVELAR COMISIÓN"</em> cada nuevo día para que los vendedores vean la animación.
-    Las <strong style="color:#FFD93D;">comisiones acumuladas de cada vendedor NO se borran</strong> entre días —
-    se mantienen sumando hasta que cierres la semana.
+    💡 <strong>Tip:</strong> Cada día de la semana tiene su <strong style="color:#FFD93D;">propia comisión</strong>.
+    Pulsa el botón del día actual para revelar su monto a los vendedores. Los montos cambian cada vez. Las
+    <strong style="color:#5EEAD4;">comisiones acumuladas NO se pierden</strong> hasta que cierres la semana.
+  </div>
+
+  <div class="day-buttons-wrap">
+    <div class="day-buttons-title">💰 REVELAR COMISIÓN DEL DÍA</div>
+    <div class="day-buttons-row" id="dayButtonsRow"></div>
   </div>
 
   <div class="cp-grid" id="cpGrid"></div>
@@ -246,12 +250,13 @@ function renderControlPanel() {
   const totalPages = SELLERS.reduce((s, x) => s + x.pages.length, 0);
   const leaderName = ranked[0]?.total > 0 ? ranked[0].name : '—';
 
-  // Comisión del día
-  let commissionLabel = '— No revelada';
+  // Comisión activa (último día revelado)
+  const active = getActiveCommission();
+  let commissionLabel = '— Sin revelar';
   let commissionColor = '#B47CFF';
-  if (state.commission && state.commission.todayDate === todayStr() && state.commission.todayAmount) {
-    commissionLabel = `$${state.commission.todayAmount}${state.commission.todayPremium ? ' ★' : ''}`;
-    commissionColor = state.commission.todayPremium ? '#FFD93D' : '#5EEAD4';
+  if (active) {
+    commissionLabel = `$${active.amount}${active.premium ? ' ★' : ''} · ${DAY_LABELS_ES[active.day]}`;
+    commissionColor = active.premium ? '#FFD93D' : '#5EEAD4';
   }
 
   // Premium restantes este mes
@@ -331,6 +336,7 @@ function renderControlPanel() {
 
 function renderAll() {
   renderControlPanel();
+  renderDayButtons();
 }
 
 // ============== Botones ==============
@@ -380,58 +386,81 @@ btnWeek.addEventListener('click', () => {
   }
 });
 
-// ============== Botón REVELAR COMISIÓN ==============
-const btnReveal = document.getElementById('btnReveal');
-btnReveal.addEventListener('click', () => {
-  Sounds.init(); // primer click activa el contexto de audio
+// ============== Botones de comisión POR DÍA ==============
+function renderDayButtons() {
+  const host = document.getElementById('dayButtonsRow');
+  if (!host) return;
   const today = todayStr();
-  const alreadyRolledToday = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
+  const todayDayIndex = (new Date().getDay() + 6) % 7; // 0=Mon ... 6=Sun
+  const todayDayKey = WEEK_DAYS[todayDayIndex] || null;
 
-  if (alreadyRolledToday) {
-    // Ofrecer dos opciones: repetir animación con mismo monto, o re-rolear nuevo
+  host.innerHTML = WEEK_DAYS.map(d => {
+    const ds = state.commission?.byDay?.[d] || {};
+    const revealed = ds.revealed && ds.amount != null;
+    const premium  = revealed && ds.premium;
+    const isToday  = d === todayDayKey;
+
+    let amountText;
+    if (revealed) {
+      amountText = `$${ds.amount}${premium ? ' ★' : ''}`;
+    } else {
+      amountText = '— Sin revelar';
+    }
+
+    const cls = ['day-btn'];
+    if (revealed)  cls.push('revealed');
+    if (premium)   cls.push('premium');
+    if (isToday)   cls.push('is-today');
+
+    return `
+      <button class="${cls.join(' ')}" data-day="${d}">
+        <div class="day-btn-day">${DAY_LABELS_ES[d]}</div>
+        <div class="day-btn-amount">${amountText}</div>
+        ${isToday ? '<div class="day-btn-tag">HOY</div>' : ''}
+      </button>
+    `;
+  }).join('');
+
+  // Premium restantes badge
+  const premiumLeft = Math.max(0, 5 - (state.commission?.premiumUsedThisMonth || 0));
+  const titleEl = document.querySelector('.day-buttons-title');
+  if (titleEl) {
+    titleEl.innerHTML = `💰 REVELAR COMISIÓN POR DÍA <span class="premium-badge">★ ${premiumLeft}/5 PREMIUM</span>`;
+  }
+
+  // Listeners
+  host.querySelectorAll('.day-btn').forEach(btn => {
+    btn.addEventListener('click', () => onDayButtonClick(btn.dataset.day));
+  });
+}
+
+function onDayButtonClick(day) {
+  Sounds.init();
+  const ds = state.commission?.byDay?.[day] || {};
+  const revealed = ds.revealed && ds.amount != null;
+
+  if (revealed) {
     const choice = prompt(
-      `Ya se reveló la comisión de HOY: $${state.commission.todayAmount} MXN${state.commission.todayPremium ? ' ★ PREMIUM' : ''}\n\n` +
-      `Escribe el número de la opción:\n\n` +
+      `${DAY_LABELS_ES[day]} ya reveló su comisión: $${ds.amount}${ds.premium ? ' ★ PREMIUM' : ''}\n\n` +
+      `¿Qué quieres hacer?\n\n` +
       `  1 = Repetir la animación con el MISMO monto\n` +
-      `  2 = ROLEAR un monto NUEVO para hoy\n` +
-      `  (Cualquier otra cosa = Cancelar)\n\n` +
+      `  2 = ROLEAR un monto NUEVO para ${DAY_LABELS_ES[day]}\n` +
+      `  (cualquier otra cosa = cancelar)\n\n` +
       `Las comisiones acumuladas de cada vendedor NO se pierden.`
     );
-
     if (choice === '1') {
-      triggerCommissionReveal();
+      triggerCommissionReveal(day, false);
       renderAll();
     } else if (choice === '2') {
-      // Forzar re-roll: limpiar el todayAmount para que rolle uno nuevo
-      // Si el actual era premium, devolvemos esa premium al pool del mes
-      if (state.commission.todayPremium && state.commission.premiumUsedThisMonth > 0) {
-        state.commission.premiumUsedThisMonth -= 1;
-      }
-      state.commission.todayDate = null;
-      state.commission.todayAmount = null;
-      state.commission.todayPremium = false;
-      saveState();
-      triggerCommissionReveal();
+      triggerCommissionReveal(day, true);
       renderAll();
     }
-    // Cualquier otra cosa = cancelar, no hacer nada
     return;
   }
 
-  triggerCommissionReveal();
+  // No revelado todavía: rolear y mostrar
+  triggerCommissionReveal(day, false);
   renderAll();
-});
-
-function updateRevealBtn() {
-  const today = todayStr();
-  const alreadyRolledToday = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
-  if (alreadyRolledToday) {
-    btnReveal.textContent = `🔄 REPETIR · HOY: $${state.commission.todayAmount}${state.commission.todayPremium ? ' ★' : ''}`;
-    btnReveal.title = 'Ya se reveló hoy. Click para repetir la animación con el mismo monto. Las comisiones acumuladas se mantienen entre días.';
-  } else {
-    btnReveal.textContent = '💰 REVELAR COMISIÓN DEL DÍA';
-    btnReveal.title = 'Revela la comisión de hoy con animación dramática para los vendedores.';
-  }
 }
 
 // ============== Init ==============
@@ -440,17 +469,9 @@ prevLeader = getRanked()[0]?.id;
 initParticles();
 setupCrossTabSync();
 renderAll();
-updateRevealBtn();
 
 // Activar audio context al primer click (browser policy)
 document.addEventListener('click', () => Sounds.init(), { once: true });
-
-// Re-render cuando cambia el state (incluye actualización de botón de revelar)
-const _renderAll_orig = renderAll;
-renderAll = function() {
-  _renderAll_orig();
-  updateRevealBtn();
-};
 </script>
 
 </body>

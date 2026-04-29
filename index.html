@@ -562,14 +562,15 @@ function renderLiveLeaderboard() {
     `;
   }).join('');
 
-  // Mostrar comisión del día
+  // Mostrar comisión activa (último día revelado)
   const commissionEl = document.getElementById('commissionNow');
   if (commissionEl) {
-    if (state.commission && state.commission.todayDate === todayStr() && state.commission.todayAmount) {
-      commissionEl.textContent = `$${state.commission.todayAmount} MXN${state.commission.todayPremium ? ' ★' : ''}`;
-      commissionEl.className = 'commission-now' + (state.commission.todayPremium ? ' premium' : '');
+    const active = getActiveCommission();
+    if (active) {
+      commissionEl.textContent = `$${active.amount} MXN${active.premium ? ' ★' : ''} · ${DAY_LABELS_ES[active.day]}`;
+      commissionEl.className = 'commission-now' + (active.premium ? ' premium' : '');
     } else {
-      commissionEl.textContent = '— · No revelada hoy';
+      commissionEl.textContent = '— Sin revelar';
       commissionEl.className = 'commission-now';
     }
   }
