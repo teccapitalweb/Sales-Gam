@@ -365,7 +365,7 @@
         <div class="live-lb-title"><span class="live-dot"></span>LEADERBOARD · EN VIVO · COMISIONES</div>
         <div class="live-lb-info">
           <span>HOY: <span class="commission-now" id="commissionNow">— · No revelada</span></span>
-          <span id="commissionPremiumLeft" style="color: rgba(255,79,182,0.8);">★ 5/5 PREMIUM</span>
+          <span id="commissionPremiumLeft" style="color: rgba(255,79,182,0.8);">★ 1/1 PREMIUM ESTE MES</span>
         </div>
       </div>
       <div class="live-lb-grid" id="liveLbGrid"></div>
@@ -578,8 +578,8 @@ function renderLiveLeaderboard() {
   const premiumLeftEl = document.getElementById('commissionPremiumLeft');
   if (premiumLeftEl) {
     const used = (state.commission && state.commission.month === monthStr()) ? (state.commission.premiumUsedThisMonth || 0) : 0;
-    const left = Math.max(0, 5 - used);
-    premiumLeftEl.textContent = `★ ${left}/5 PREMIUM RESTANTES`;
+    const left = Math.max(0, PREMIUM_PER_MONTH - used);
+    premiumLeftEl.textContent = `★ ${left}/${PREMIUM_PER_MONTH} PREMIUM ESTE MES`;
   }
 }
 

@@ -1092,6 +1092,9 @@ const DAY_LABELS_ES = {
   thursday: 'JUEVES', friday: 'VIERNES', saturday: 'SÁBADO'
 };
 
+// Número de comisiones premium ($25-$30) que se permiten por mes
+const PREMIUM_PER_MONTH = 1;
+
 // Inicializar / migrar state de commission
 function ensureCommissionState() {
   if (!state.commission) {
@@ -1154,19 +1157,25 @@ function rollCommissionForDay(day, forceReroll = false) {
     state.commission.premiumUsedThisMonth -= 1;
   }
 
-  // Probabilidad inteligente:
-  // Quedan N rolls posibles este mes (días restantes × 6/7)
-  // Y M premium restantes. Probabilidad ≈ M/N
+  // Probabilidad inteligente para 1 premium al mes:
+  // - Base muy baja (~7%) durante todo el mes para que sea RARA y especial
+  // - Si quedan pocos rolls del mes y aún no salió la premium, subir gradualmente
+  //   para garantizar que aparezca al menos una vez
   const date = new Date();
   const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const daysLeft  = totalDays - date.getDate() + 1;
   const rollsLeftEstimate = Math.max(1, Math.round(daysLeft * 6 / 7));
-  const premiumLeft = Math.max(0, 5 - (state.commission.premiumUsedThisMonth || 0));
+  const premiumLeft = Math.max(0, PREMIUM_PER_MONTH - (state.commission.premiumUsedThisMonth || 0));
 
   let premiumChance = 0;
   if (premiumLeft > 0) {
-    premiumChance = premiumLeft / rollsLeftEstimate;
-    premiumChance = Math.max(0.06, Math.min(0.6, premiumChance));
+    // Base: 7% por roll → con ~24 rolls al mes sale ~82% de las veces
+    premiumChance = 0.07;
+    // Si quedan pocos rolls y aún no apareció, escalar para asegurar que salga
+    const minNeeded = premiumLeft / rollsLeftEstimate;
+    if (minNeeded > premiumChance) premiumChance = minNeeded;
+    // Cap superior
+    premiumChance = Math.min(0.85, premiumChance);
   }
 
   const isPremium = premiumLeft > 0 && Math.random() < premiumChance;

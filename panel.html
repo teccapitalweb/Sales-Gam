@@ -262,7 +262,7 @@ function renderControlPanel() {
   // Premium restantes este mes
   const premiumUsed = (state.commission && state.commission.month === monthStr())
     ? (state.commission.premiumUsedThisMonth || 0) : 0;
-  const premiumLeft = Math.max(0, 5 - premiumUsed);
+  const premiumLeft = Math.max(0, PREMIUM_PER_MONTH - premiumUsed);
 
   document.getElementById('cpStats').innerHTML = `
     <div class="stat-card" style="--accent: #5EEAD4; --accent-40: #5EEAD466; --accent-80: #5EEAD4cc;">
@@ -279,7 +279,7 @@ function renderControlPanel() {
     </div>
     <div class="stat-card" style="--accent: #FF4FB6; --accent-40: #FF4FB666; --accent-80: #FF4FB6cc;">
       <div class="label">★ PREMIUM RESTANTES (MES)</div>
-      <div class="value" style="color: #FF4FB6;">${premiumLeft}/5</div>
+      <div class="value" style="color: #FF4FB6;">${premiumLeft}/${PREMIUM_PER_MONTH}</div>
     </div>
   `;
 
@@ -422,10 +422,10 @@ function renderDayButtons() {
   }).join('');
 
   // Premium restantes badge
-  const premiumLeft = Math.max(0, 5 - (state.commission?.premiumUsedThisMonth || 0));
+  const premiumLeft = Math.max(0, PREMIUM_PER_MONTH - (state.commission?.premiumUsedThisMonth || 0));
   const titleEl = document.querySelector('.day-buttons-title');
   if (titleEl) {
-    titleEl.innerHTML = `💰 REVELAR COMISIÓN POR DÍA <span class="premium-badge">★ ${premiumLeft}/5 PREMIUM</span>`;
+    titleEl.innerHTML = `💰 REVELAR COMISIÓN POR DÍA <span class="premium-badge">★ ${premiumLeft}/${PREMIUM_PER_MONTH} PREMIUM ESTE MES</span>`;
   }
 
   // Listeners
