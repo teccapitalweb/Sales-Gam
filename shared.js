@@ -1125,6 +1125,125 @@ const Sounds = {
   smallReveal() {
     this.beep(659, 0.1, 'square', 0.35);
     setTimeout(() => this.beep(880, 0.18, 'square', 0.35), 100);
+  },
+
+  // Melodía dramática estilo Squid Game (~14 segundos)
+  // Trompetas + drums marcando tensión, sube intensidad
+  squidMelody() {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const ctx = this.ctx;
+    const master = this.master;
+
+    // Brass sintético (sawtooth + sub-octava)
+    function brass(freq, start, dur, vol = 0.22) {
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc1.type = 'sawtooth';
+      osc2.type = 'square';
+      osc1.frequency.value = freq;
+      osc2.frequency.value = freq * 0.5;
+      osc1.connect(g); osc2.connect(g);
+      g.connect(master);
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(vol, t + 0.04);
+      g.gain.linearRampToValueAtTime(vol * 0.65, t + dur * 0.4);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      osc1.start(t); osc2.start(t);
+      osc1.stop(t + dur); osc2.stop(t + dur);
+    }
+
+    // Kick drum
+    function kick(start, vol = 0.35) {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.connect(g); g.connect(master);
+      const t = ctx.currentTime + start;
+      osc.frequency.setValueAtTime(160, t);
+      osc.frequency.exponentialRampToValueAtTime(40, t + 0.15);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+      osc.start(t); osc.stop(t + 0.25);
+    }
+
+    // Snare (ruido filtrado)
+    function snare(start, vol = 0.18) {
+      const buf = ctx.createBuffer(1, ctx.sampleRate * 0.12, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      const noise = ctx.createBufferSource();
+      noise.buffer = buf;
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass'; filter.frequency.value = 1800;
+      const g = ctx.createGain();
+      const t = ctx.currentTime + start;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.1);
+      noise.connect(filter); filter.connect(g); g.connect(master);
+      noise.start(t);
+    }
+
+    // Notas (escala A minor — tono dramático)
+    const A3 = 220, A4 = 440, C5 = 523, D5 = 587;
+    const E5 = 659, F5 = 698, G5 = 783, A5 = 880, B5 = 988, C6 = 1046;
+
+    // ===== Compás 1: intro lento, anticipación (0–2s) =====
+    brass(A4, 0,    0.5, 0.18);
+    brass(C5, 0.5,  0.5, 0.20);
+    brass(E5, 1.0,  0.5, 0.22);
+    brass(A5, 1.5,  0.5, 0.24);
+    kick(0); kick(0.5); kick(1.0); kick(1.5);
+
+    // ===== Compás 2: descenso dramático (2–4s) =====
+    brass(G5, 2.0, 0.5, 0.24);
+    brass(F5, 2.5, 0.5, 0.24);
+    brass(E5, 3.0, 0.5, 0.24);
+    brass(D5, 3.5, 0.5, 0.24);
+    kick(2.0); kick(2.5); kick(3.0); kick(3.5);
+    snare(2.5); snare(3.5);
+
+    // ===== Compás 3: subida épica (4–6s) =====
+    brass(C5, 4.0, 0.4, 0.24);
+    brass(E5, 4.4, 0.4, 0.26);
+    brass(G5, 4.8, 0.4, 0.28);
+    brass(B5, 5.2, 0.4, 0.30);
+    brass(C6, 5.6, 0.4, 0.32);
+    for (let i = 0; i < 4; i++) kick(4.0 + i * 0.5);
+    snare(4.5); snare(5.5);
+
+    // ===== Compás 4: climax con harmonía (6–8.4s) =====
+    brass(A5, 6.0, 0.6, 0.30);
+    brass(C5, 6.0, 0.6, 0.16);  // harmonía
+    brass(G5, 6.6, 0.6, 0.30);
+    brass(E5, 6.6, 0.6, 0.16);
+    brass(A5, 7.2, 0.6, 0.32);
+    brass(E5, 7.2, 0.6, 0.16);
+    brass(C6, 7.8, 0.6, 0.34);
+    brass(A5, 7.8, 0.6, 0.18);
+    for (let i = 0; i < 5; i++) { kick(6.0 + i * 0.5); snare(6.25 + i * 0.5); }
+
+    // ===== Compás 5: descenso dramático final (8.4–11.4s) =====
+    brass(C6, 8.4, 0.5, 0.34);
+    brass(B5, 8.9, 0.5, 0.34);
+    brass(A5, 9.4, 0.5, 0.34);
+    brass(G5, 9.9, 0.5, 0.32);
+    brass(F5, 10.4, 0.5, 0.32);
+    brass(E5, 10.9, 0.5, 0.32);
+    for (let i = 0; i < 5; i++) { kick(8.4 + i * 0.5); snare(8.65 + i * 0.5); }
+
+    // ===== Compás 6: nota sostenida + drumroll (11.4–13.5s) =====
+    brass(A5, 11.4, 1.8, 0.36);
+    brass(E5, 11.4, 1.8, 0.18);
+    brass(C5, 11.4, 1.8, 0.16);
+    // Drumroll snare en aceleración
+    for (let i = 0; i < 30; i++) {
+      const tt = 11.4 + i * 0.07;
+      snare(tt, 0.10 + i * 0.005);
+    }
   }
 };
 
@@ -1169,9 +1288,9 @@ function showCommissionReveal(data) {
     </div>
     <div class="reveal-content">
       <div class="reveal-tag">▸ COMISIÓN DEL DÍA ◂</div>
-      <div class="reveal-amount" id="revealAmount">$00</div>
-      <div class="reveal-status" id="revealStatus">CALCULANDO...</div>
-      <div class="reveal-message" id="revealMessage">¡SUERTE!</div>
+      <div class="reveal-amount" id="revealAmount">$??</div>
+      <div class="reveal-status" id="revealStatus">EL JEFE LO ESTÁ DECIDIENDO...</div>
+      <div class="reveal-message" id="revealMessage">PREPÁRATE · ESTO VIENE FUERTE</div>
       ${data.premium ? '<div class="reveal-premium-badge">★ DÍA PREMIUM ★</div>' : ''}
     </div>
   `;
@@ -1179,65 +1298,87 @@ function showCommissionReveal(data) {
   void overlay.offsetWidth;
   overlay.classList.add('visible');
 
-  // Drumroll
-  Sounds.drumroll(2800);
+  // ===== FASE 1: Música épica de Squid Game (~13.5 seg) =====
+  Sounds.squidMelody();
 
-  // Slot machine animation
   const amountEl  = overlay.querySelector('#revealAmount');
   const statusEl  = overlay.querySelector('#revealStatus');
   const messageEl = overlay.querySelector('#revealMessage');
   const target = data.amount;
   const range  = data.premium ? [25, 30] : [12, 24];
 
-  const start = Date.now();
-  const duration = 3000;
-  let lastChange = 0;
-  let lastTickTime = 0;
-
-  function frame() {
-    const t = (Date.now() - start) / duration;
-    if (t >= 1) {
-      amountEl.textContent = `$${target}`;
-      amountEl.classList.add('final');
-      statusEl.textContent = '¡COMISIÓN DEL DÍA!';
-      messageEl.textContent = data.premium ? '¡DÍA ESPECIAL · A DARLE CON TODO! 🔥' : '¡SUERTE · A VENDER!';
-
-      if (data.premium) {
-        Sounds.bigReveal();
-        setTimeout(() => massiveConfetti('#FFD93D', '#FF8C42'), 100);
-        setTimeout(() => massiveConfetti('#FF4FB6', '#FFD93D'), 700);
-        setTimeout(() => massiveConfetti('#FFD93D', '#5EEAD4'), 1400);
-      } else {
-        Sounds.smallReveal();
-        setTimeout(() => smallConfetti('#5EEAD4'), 100);
-      }
-      return;
-    }
-
-    // Cambiar el número con velocidad decreciente
-    const easeT = t * t; // ease-in (acelera al inicio, se desacelera al final)
-    const interval = 50 + 350 * easeT;
-    if (Date.now() - lastChange >= interval) {
+  // Animación sutil del número durante la música (cambios lentos)
+  let teaserChange = 0;
+  let teaserActive = true;
+  function teaserFrame() {
+    if (!teaserActive) return;
+    if (Date.now() - teaserChange >= 700) {
       const fake = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
       amountEl.textContent = `$${fake}`;
-      lastChange = Date.now();
+      teaserChange = Date.now();
     }
-
-    // Tick sound (cada cierto tiempo)
-    if (Date.now() - lastTickTime >= Math.max(80, interval * 0.7)) {
-      Sounds.tick();
-      lastTickTime = Date.now();
-    }
-
-    requestAnimationFrame(frame);
+    requestAnimationFrame(teaserFrame);
   }
-  requestAnimationFrame(frame);
+  requestAnimationFrame(teaserFrame);
 
-  // Auto-cerrar después de 8s
+  // Cambiar mensajes durante la música para crear tensión
+  setTimeout(() => { statusEl.textContent = 'CALCULANDO LA SUERTE...'; }, 4000);
+  setTimeout(() => { statusEl.textContent = 'YA CASI LO TENEMOS...'; }, 8000);
+  setTimeout(() => {
+    statusEl.textContent = 'RESULTADO INMINENTE...';
+    messageEl.textContent = '¡PREPÁRATE!';
+  }, 11500);
+
+  // ===== FASE 2: Slot machine final (13.5s — 16.5s) =====
+  setTimeout(() => {
+    teaserActive = false;
+    const start = Date.now();
+    const duration = 3000;
+    let lastChange = 0, lastTickTime = 0;
+
+    function frame() {
+      const t = (Date.now() - start) / duration;
+      if (t >= 1) {
+        amountEl.textContent = `$${target}`;
+        amountEl.classList.add('final');
+        statusEl.textContent = '¡COMISIÓN DEL DÍA!';
+        messageEl.textContent = data.premium ? '¡DÍA ESPECIAL · A DARLE CON TODO! 🔥' : '¡SUERTE · A VENDER!';
+
+        if (data.premium) {
+          Sounds.bigReveal();
+          setTimeout(() => massiveConfetti('#FFD93D', '#FF8C42'), 100);
+          setTimeout(() => massiveConfetti('#FF4FB6', '#FFD93D'), 700);
+          setTimeout(() => massiveConfetti('#FFD93D', '#5EEAD4'), 1400);
+        } else {
+          Sounds.smallReveal();
+          setTimeout(() => smallConfetti('#5EEAD4'), 100);
+        }
+        return;
+      }
+
+      const easeT = t * t;
+      const interval = 50 + 350 * easeT;
+      if (Date.now() - lastChange >= interval) {
+        const fake = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
+        amountEl.textContent = `$${fake}`;
+        lastChange = Date.now();
+      }
+
+      if (Date.now() - lastTickTime >= Math.max(80, interval * 0.7)) {
+        Sounds.tick();
+        lastTickTime = Date.now();
+      }
+
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }, 13500);
+
+  // Auto-cerrar después de 22 segundos
   setTimeout(() => {
     overlay.classList.add('leaving');
     setTimeout(() => overlay.remove(), 800);
-  }, 8000);
+  }, 22000);
 
   // Click anywhere to dismiss
   overlay.addEventListener('click', (e) => {

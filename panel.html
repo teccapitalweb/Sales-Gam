@@ -77,6 +77,24 @@
   text-shadow: 0 0 10px var(--accent-80, rgba(180,124,255,0.8));
 }
 
+.cp-info-banner {
+  background: linear-gradient(135deg, rgba(255,79,182,0.08), rgba(180,124,255,0.08));
+  border: 1px solid rgba(255,79,182,0.3);
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-family: var(--font-body, 'Rajdhani', sans-serif);
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+.cp-info-banner em {
+  color: #FF4FB6;
+  font-style: normal;
+  font-weight: 700;
+}
+
 /* ============== Lista por vendedor (organizado y ordenado) ============== */
 .cp-grid {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -204,6 +222,13 @@
   </header>
 
   <div class="cp-stats" id="cpStats"></div>
+
+  <div class="cp-info-banner">
+    💡 <strong>Tip:</strong> Pulsa <em>"REVELAR COMISIÓN"</em> cada nuevo día para que los vendedores vean la animación.
+    Las <strong style="color:#FFD93D;">comisiones acumuladas de cada vendedor NO se borran</strong> entre días —
+    se mantienen sumando hasta que cierres la semana.
+  </div>
+
   <div class="cp-grid" id="cpGrid"></div>
 
   <div class="cp-summary">
@@ -360,10 +385,14 @@ const btnReveal = document.getElementById('btnReveal');
 btnReveal.addEventListener('click', () => {
   Sounds.init(); // primer click activa el contexto de audio
   const today = todayStr();
-  const alreadyRolled = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
+  const alreadyRolledToday = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
 
-  if (alreadyRolled) {
-    if (!confirm(`Ya se reveló la comisión de hoy: $${state.commission.todayAmount} MXN.\n\n¿Quieres volver a mostrar la animación a los vendedores?`)) {
+  if (alreadyRolledToday) {
+    if (!confirm(
+      `Ya se reveló la comisión de HOY: $${state.commission.todayAmount} MXN${state.commission.todayPremium ? ' ★ PREMIUM' : ''}.\n\n` +
+      `Si pulsas OK volveré a mostrar la animación a los vendedores con el mismo monto.\n\n` +
+      `(Las comisiones acumuladas de cada vendedor NO se pierden — siguen sumándose.)`
+    )) {
       return;
     }
   }
@@ -374,11 +403,13 @@ btnReveal.addEventListener('click', () => {
 
 function updateRevealBtn() {
   const today = todayStr();
-  const alreadyRolled = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
-  if (alreadyRolled) {
-    btnReveal.textContent = `✓ REVELADA: $${state.commission.todayAmount}${state.commission.todayPremium ? ' ★' : ''}`;
+  const alreadyRolledToday = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
+  if (alreadyRolledToday) {
+    btnReveal.textContent = `🔄 REPETIR · HOY: $${state.commission.todayAmount}${state.commission.todayPremium ? ' ★' : ''}`;
+    btnReveal.title = 'Ya se reveló hoy. Click para repetir la animación con el mismo monto. Las comisiones acumuladas se mantienen entre días.';
   } else {
     btnReveal.textContent = '💰 REVELAR COMISIÓN DEL DÍA';
+    btnReveal.title = 'Revela la comisión de hoy con animación dramática para los vendedores.';
   }
 }
 
