@@ -1,0 +1,1708 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SALES ARENA — TEC CAPITAL</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<style>
+/* ============================================================
+   SALES ARENA v2 — Podio vertical + ceremonia semanal
+   ============================================================ */
+:root {
+  --bg-base: #0a0118;
+  --c-yellow: #FFD93D; --c-orange: #FF8C42; --c-blue: #6BC9FF;
+  --c-pink:   #FF4FB6; --c-mint:   #5EEAD4; --c-purple: #B47CFF;
+  --font-display: 'Orbitron', system-ui, sans-serif;
+  --font-body:    'Rajdhani', system-ui, sans-serif;
+  --font-mono:    'Share Tech Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; overflow-x: hidden; }
+
+body {
+  font-family: var(--font-body); color: #fff;
+  background: var(--bg-base);
+  background-image:
+    radial-gradient(ellipse at top left,    rgba(180, 124, 255, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(255, 79, 182, 0.15) 0%, transparent 55%),
+    radial-gradient(ellipse at center,       rgba(107, 201, 255, 0.08) 0%, transparent 70%);
+  background-attachment: fixed;
+  letter-spacing: 0.02em;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background-image:
+    linear-gradient(rgba(180, 124, 255, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(180, 124, 255, 0.06) 1px, transparent 1px);
+  background-size: 60px 60px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 20%, transparent 80%);
+          mask-image: radial-gradient(ellipse at center, black 20%, transparent 80%);
+}
+
+body::after {
+  content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 1; mix-blend-mode: overlay;
+  background: repeating-linear-gradient(180deg, transparent 0, transparent 3px,
+    rgba(255,255,255,0.012) 3px, rgba(255,255,255,0.012) 4px);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display); font-weight: 900;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+button {
+  font-family: var(--font-display); font-weight: 700;
+  letter-spacing: 0.05em; cursor: pointer; border: none; background: none; color: inherit;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: rgba(10,1,24,0.4); }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, var(--c-purple), var(--c-pink)); border-radius: 4px; }
+
+/* ============== Animations base ============== */
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes blink-led { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(1.2); } }
+@keyframes float-y { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes wobble {
+  0%,100% { transform: rotate(0deg); }
+  25% { transform: rotate(-4deg); }
+  75% { transform: rotate(4deg); }
+}
+@keyframes spin-reveal {
+  0%   { transform: rotateY(0deg); }
+  100% { transform: rotateY(360deg); }
+}
+@keyframes bounce-pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  70%  { transform: scale(0.92); }
+  100% { transform: scale(1); }
+}
+@keyframes idle-pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+@keyframes plus-fly { 0% { opacity: 0; transform: translateY(0) scale(0.5); } 20% { opacity: 1; transform: translateY(-30px) scale(1.4); } 100% { opacity: 0; transform: translateY(-150px) scale(1.4); } }
+@keyframes pop-in   { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes pop-out  { 0% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(0.6); } }
+
+@keyframes bar-glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px var(--accent), 0 0 40px var(--accent-80); }
+  50%      { box-shadow: 0 0 50px var(--accent), 0 0 90px var(--accent); }
+}
+
+@keyframes spark-rise {
+  0%   { transform: translateY(0) scale(0.8); opacity: 0; }
+  20%  { opacity: 1; }
+  100% { transform: translateY(-100px) scale(0.4); opacity: 0; }
+}
+
+@keyframes climb-flash {
+  0%, 100% { box-shadow: 0 0 30px var(--accent-30, rgba(180,124,255,0.3)); }
+  50%      { box-shadow: 0 0 80px var(--accent), 0 0 140px var(--accent); }
+}
+
+@keyframes pillar-rise {
+  0% { height: 0; opacity: 0.5; }
+  100% { height: var(--target-h); opacity: 1; }
+}
+
+/* HUD corners */
+.hud-corner { position: absolute; width: 16px; height: 16px; border: 2px solid var(--accent, var(--c-purple)); pointer-events: none; }
+.hud-corner.tl { top: -2px;    left: -2px;    border-right: none; border-bottom: none; }
+.hud-corner.tr { top: -2px;    right: -2px;   border-left: none;  border-bottom: none; }
+.hud-corner.bl { bottom: -2px; left: -2px;    border-right: none; border-top: none; }
+.hud-corner.br { bottom: -2px; right: -2px;   border-left: none;  border-top: none; }
+
+#particles { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+/* ============== Vistas ============== */
+.view { display: none; position: relative; z-index: 2; min-height: 100vh; }
+.view.active { display: block; }
+
+.top-nav {
+  position: fixed; top: 16px; right: 16px; z-index: 90;
+  display: flex; gap: 8px;
+}
+.top-nav button {
+  padding: 8px 14px; background: rgba(20,8,40,0.7); backdrop-filter: blur(8px);
+  border: 1px solid rgba(180,124,255,0.4); border-radius: 8px;
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.85); transition: all 0.2s;
+}
+.top-nav button:hover { border-color: var(--c-purple); color: #fff; }
+
+/* ============== Leaderboard ============== */
+.lb-wrap { padding: 24px 32px 32px; }
+
+.lb-header {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 24px; margin-bottom: 24px;
+  position: relative; z-index: 4;
+}
+
+.hud-stat .label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.3em; color: rgba(255,255,255,0.5); margin-bottom: 6px;
+}
+.hud-stat .value {
+  font-family: var(--font-display); font-size: 28px; font-weight: 900; line-height: 1;
+}
+.hud-stat.right { text-align: right; }
+.hud-stat .value.mono { font-family: var(--font-mono); }
+
+.title-block { text-align: center; }
+.title-tag {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.5em; color: rgba(180,124,255,0.8); margin-bottom: 4px;
+}
+.title-main {
+  font-size: clamp(32px, 4.5vw, 54px);
+  background: linear-gradient(90deg, #FFD93D 0%, #FF8C42 25%, #FF4FB6 50%, #B47CFF 75%, #6BC9FF 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.08em; line-height: 1;
+  animation: shimmer 6s linear infinite;
+  filter: drop-shadow(0 0 30px rgba(180,124,255,0.6));
+}
+.title-sub {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 12px;
+  color: rgba(255,255,255,0.6); letter-spacing: 0.3em;
+}
+.live-dot {
+  display: inline-block; width: 9px; height: 9px; border-radius: 999px;
+  background: #FF4FB6; box-shadow: 0 0 10px #FF4FB6;
+  animation: blink-led 1.4s infinite ease-in-out;
+}
+
+/* ==============================================================
+   PODIO VERTICAL
+   ============================================================== */
+.podium-wrap {
+  max-width: 1280px; margin: 0 auto;
+  position: relative; z-index: 3;
+}
+
+.podium {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  align-items: end;             /* alinear al fondo */
+  height: clamp(420px, 58vh, 580px);
+  padding: 0 6px;
+}
+
+/* Cada pilar — alturas escalonadas tipo podio físico */
+.pillar {
+  position: relative;
+  display: flex; flex-direction: column;
+  background: linear-gradient(180deg, rgba(20,8,40,0.65) 0%, rgba(35,15,65,0.85) 100%);
+  border: 2px solid var(--accent-40, rgba(180,124,255,0.4));
+  border-radius: 18px 18px 12px 12px;
+  padding: 18px 14px 14px;
+  overflow: hidden;
+  box-shadow: 0 0 30px var(--accent-15, rgba(180,124,255,0.2)),
+              inset 0 1px 0 rgba(255,255,255,0.06);
+  transition: all 0.5s cubic-bezier(.5, 1.5, .5, 1);
+}
+
+/* Alturas según rank — efecto podio */
+.pillar.rank-0 { height: 100%; }
+.pillar.rank-1 { height: 88%; }
+.pillar.rank-2 { height: 76%; }
+.pillar.rank-3 { height: 66%; }
+
+.pillar.glow { animation: climb-flash 0.9s ease; }
+
+/* Borde brillante superior para el #1 */
+.pillar.rank-0::before {
+  content: '';
+  position: absolute; top: -2px; left: -2px; right: -2px; height: 4px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt), var(--accent));
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+  border-radius: 18px 18px 0 0;
+}
+
+/* HEADER del pillar: rank + medalla */
+.pillar-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.pillar-rank {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 26px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-alt));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 8px var(--accent));
+  line-height: 1;
+}
+.pillar.rank-0 .pillar-rank { font-size: 36px; }
+.pillar-medal {
+  font-size: 18px; filter: drop-shadow(0 0 6px var(--accent));
+}
+.pillar.rank-0 .pillar-medal { font-size: 24px; }
+
+/* AVATAR del pillar */
+.pillar-avatar {
+  display: flex; align-items: center; justify-content: center;
+  margin: 4px 0 8px;
+  filter: drop-shadow(0 0 12px var(--accent)) drop-shadow(0 0 24px var(--accent-55, rgba(180,124,255,0.55)));
+  animation: float-y 3.2s infinite ease-in-out;
+  transform-origin: center;
+  transform-style: preserve-3d;
+}
+/* Animaciones one-shot */
+.pillar-avatar.spin {
+  animation: spin-reveal 0.9s cubic-bezier(.4, 0, .2, 1), float-y 3.2s 0.9s infinite ease-in-out;
+}
+.pillar-avatar.bounce {
+  animation: bounce-pop 0.55s cubic-bezier(.5, 1.5, .5, 1), float-y 3.2s 0.55s infinite ease-in-out;
+}
+/* El #1 tiene un wobble constante extra */
+.pillar.rank-0 .pillar-avatar {
+  animation: float-y 3.2s infinite ease-in-out, wobble 4s 1s infinite ease-in-out;
+}
+
+/* NOMBRE */
+.pillar-name {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 16px;
+  color: #fff;
+  text-shadow: 0 0 12px var(--accent);
+  text-align: center;
+  letter-spacing: 0.04em;
+  margin-bottom: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pillar.rank-0 .pillar-name { font-size: 20px; }
+
+.pillar-tag {
+  font-family: var(--font-mono); font-size: 9px;
+  color: var(--accent); letter-spacing: 0.2em;
+  text-align: center; opacity: 0.85; margin-bottom: 8px;
+}
+.pillar.rank-0 .pillar-tag { font-size: 10px; }
+
+/* BARRA VERTICAL */
+.bar-v {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  background: rgba(0,0,0,0.55);
+  border-radius: 10px;
+  border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
+  overflow: hidden;
+  box-shadow: inset 0 0 12px rgba(0,0,0,0.6);
+  min-height: 100px;
+}
+.bar-v-fill {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(0deg, var(--accent-alt) 0%, var(--accent) 50%, var(--accent-alt) 100%);
+  background-size: 100% 200%;
+  animation: shimmer 2.5s linear infinite, bar-glow-pulse 2s infinite ease-in-out;
+  border-radius: 10px;
+  transition: height 0.9s cubic-bezier(.34, 1.56, .64, 1);
+  height: 0%;
+}
+.bar-v-fill::before {
+  /* Brillo lateral */
+  content: ''; position: absolute; left: 2px; top: 0; bottom: 0; width: 30%;
+  background: linear-gradient(90deg, rgba(255,255,255,0.4), transparent);
+  border-radius: 10px;
+  pointer-events: none;
+}
+.bar-v-fill::after {
+  /* Línea brillante en la parte superior */
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px;
+  background: rgba(255,255,255,0.85);
+  box-shadow: 0 0 12px #fff;
+  border-radius: 10px 10px 0 0;
+}
+.bar-v-ticks {
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(0deg,
+    transparent 0, transparent 22px,
+    rgba(255,255,255,0.06) 22px, rgba(255,255,255,0.06) 24px);
+  pointer-events: none;
+}
+
+/* Número grande arriba de la barra */
+.bar-v-num {
+  position: absolute; left: 0; right: 0; top: 6px;
+  text-align: center;
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 22px; color: #fff;
+  text-shadow: 0 0 10px var(--accent), 0 2px 4px rgba(0,0,0,0.9);
+  letter-spacing: 0.04em;
+  z-index: 3; pointer-events: none;
+  transition: transform 0.3s;
+}
+.pillar.rank-0 .bar-v-num { font-size: 30px; }
+.bar-v-num.bump { animation: bounce-pop 0.5s ease; }
+
+/* Sparks (chispas que suben dentro de la barra) */
+.bar-v-sparks { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.spark {
+  position: absolute;
+  width: 4px; height: 4px; border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent), 0 0 16px var(--accent);
+  animation: spark-rise 1.6s ease-out forwards;
+}
+
+/* Climb badge */
+.climb-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+  color: #0a0118; padding: 3px 8px; border-radius: 999px;
+  font-family: var(--font-display); font-size: 9px; font-weight: 900;
+  letter-spacing: 0.1em; box-shadow: 0 0 16px var(--accent);
+  animation: pop-in 0.4s ease;
+  z-index: 5;
+}
+
+/* Bench */
+.bench {
+  margin-top: 16px; padding: 12px 16px;
+  background: rgba(20,8,40,0.4);
+  border: 1px dashed rgba(180,124,255,0.25);
+  border-radius: 12px; display: flex;
+  align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.bench-label {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.3em; color: rgba(255,255,255,0.45);
+}
+.bench-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px;
+  background: var(--accent-15, rgba(180,124,255,0.15));
+  border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
+  border-radius: 999px;
+  font-family: var(--font-display); font-size: 11px; font-weight: 700;
+}
+.bench-chip-rank { color: var(--accent); }
+.bench-chip-num { color: var(--accent); font-weight: 900; }
+
+/* Idle banner */
+.idle-banner {
+  position: fixed; top: 84px; left: 50%; transform: translateX(-50%);
+  z-index: 5; pointer-events: none;
+  display: inline-flex; align-items: center; gap: 12px;
+  padding: 10px 22px;
+  background: rgba(20,8,40,0.6); backdrop-filter: blur(8px);
+  border: 1px solid rgba(180,124,255,0.3);
+  border-radius: 999px;
+  font-family: var(--font-mono); font-size: 12px;
+  color: rgba(180,124,255,0.9); letter-spacing: 0.4em;
+  animation: idle-pulse 2.4s infinite ease-in-out;
+  opacity: 0; transition: opacity 0.6s;
+}
+.idle-banner.visible { opacity: 1; }
+.idle-dot {
+  display: inline-block; width: 7px; height: 7px; border-radius: 999px;
+  background: rgba(180,124,255,1); box-shadow: 0 0 12px rgba(180,124,255,1);
+  animation: blink-led 1.6s infinite ease-in-out;
+}
+
+/* Floating events */
+.float-plus {
+  position: fixed; pointer-events: none; z-index: 70;
+  font-family: var(--font-display); font-weight: 900; font-size: 56px;
+  animation: plus-fly 1.4s ease-out forwards;
+}
+.outsider-pop {
+  position: fixed; bottom: 60px; left: 60px; z-index: 80;
+  background: linear-gradient(135deg, rgba(20,8,40,0.95), rgba(40,15,80,0.95));
+  border-radius: 16px; padding: 14px 20px 14px 14px;
+  display: flex; align-items: center; gap: 14px;
+  pointer-events: none;
+  animation: pop-in 0.5s cubic-bezier(.5,1.5,.5,1) forwards;
+}
+.outsider-pop.leaving { animation: pop-out 0.4s ease forwards; }
+.outsider-pop .name {
+  font-family: var(--font-display); font-weight: 900; font-size: 18px;
+}
+.outsider-pop .plus {
+  font-family: var(--font-display); font-weight: 900; font-size: 28px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-alt));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1;
+}
+.leader-banner {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
+  z-index: 100; pointer-events: none;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  padding: 4px; border-radius: 24px;
+  box-shadow: 0 0 120px var(--accent), 0 0 200px var(--accent-alt);
+  animation: pop-in 0.6s cubic-bezier(.5,1.5,.5,1) forwards;
+}
+.leader-banner.leaving { animation: pop-out 0.5s ease forwards; }
+.leader-inner { background: rgba(10,1,24,0.95); border-radius: 22px; padding: 28px 56px; text-align: center; }
+.leader-tag { font-family: var(--font-mono); font-size: 13px; color: var(--accent); letter-spacing: 0.4em; margin-bottom: 12px; }
+.leader-row { display: flex; align-items: center; gap: 24px; justify-content: center; }
+.leader-name {
+  font-family: var(--font-display); font-size: 56px; font-weight: 900;
+  background: linear-gradient(180deg, var(--accent), var(--accent-alt));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: 0.05em; line-height: 1;
+}
+.leader-throne {
+  margin-top: 14px; font-family: var(--font-display);
+  font-size: 18px; font-weight: 700;
+  text-shadow: 0 0 20px var(--accent); letter-spacing: 0.2em;
+}
+
+/* ============== Control Panel ============== */
+.cp-wrap { padding: 24px 32px 64px; max-width: 1400px; margin: 0 auto; }
+
+.cp-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; padding-bottom: 18px;
+  border-bottom: 1px solid rgba(180,124,255,0.2);
+  flex-wrap: wrap; gap: 16px;
+}
+.cp-header-left { flex: 1; min-width: 280px; }
+.cp-header-tag {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.4em; color: rgba(180,124,255,0.8); margin-bottom: 4px;
+}
+.cp-header-title {
+  font-family: var(--font-display); font-size: 28px;
+  background: linear-gradient(90deg, #FFD93D, #FF8C42, #FF4FB6);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  letter-spacing: 0.06em;
+}
+.cp-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-ghost {
+  padding: 8px 14px; background: rgba(20,8,40,0.6);
+  border: 1px solid rgba(180,124,255,0.3); border-radius: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.15em; color: rgba(255,255,255,0.85);
+}
+.btn-ghost:hover { border-color: var(--c-purple); color: #fff; }
+.btn-danger {
+  padding: 8px 14px; background: rgba(255,79,182,0.1);
+  border: 1px solid rgba(255,79,182,0.5); border-radius: 8px;
+  font-family: var(--font-display); font-weight: 700; font-size: 11px;
+  letter-spacing: 0.15em; color: #FF4FB6;
+}
+.btn-danger.solid { background: #FF4FB6; color: #0a0118; }
+
+.btn-week {
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #FFD93D, #FF8C42);
+  border: none; border-radius: 8px;
+  font-family: var(--font-display); font-weight: 900; font-size: 12px;
+  letter-spacing: 0.15em; color: #0a0118;
+  box-shadow: 0 4px 16px rgba(255,140,66,0.5);
+  transition: all 0.2s;
+}
+.btn-week:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(255,140,66,0.8); }
+.btn-week.confirm { background: linear-gradient(135deg, #FF4FB6, #B47CFF); color: #fff; }
+
+.cp-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px; margin-bottom: 24px;
+}
+.stat-card {
+  background: rgba(20,8,40,0.6);
+  border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
+  border-radius: 10px; padding: 12px 16px;
+}
+.stat-card .label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.3em; color: rgba(255,255,255,0.5); margin-bottom: 4px;
+}
+.stat-card .value {
+  font-family: var(--font-display); font-size: 22px; font-weight: 900;
+  text-shadow: 0 0 10px var(--accent-80, rgba(180,124,255,0.8));
+}
+
+.cp-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.page-btn {
+  position: relative; width: 100%; text-align: left;
+  background: linear-gradient(135deg, rgba(20,8,40,0.9), rgba(35,15,65,0.9));
+  border: 2px solid var(--accent-50, rgba(180,124,255,0.5));
+  border-radius: 14px; padding: 16px 18px;
+  cursor: pointer; overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  transition: transform 0.18s, border-color 0.2s, box-shadow 0.2s;
+}
+.page-btn:hover {
+  border-color: var(--accent);
+  transform: translateY(-3px) scale(1.015);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4), 0 0 24px var(--accent-50);
+}
+.page-btn:active { transform: translateY(0) scale(0.97); }
+.page-btn-glow {
+  position: absolute; top: 0; bottom: 0; left: 0; width: 4px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-alt));
+  box-shadow: 0 0 16px var(--accent);
+}
+.page-btn-row { display: flex; align-items: center; gap: 14px; }
+.page-btn-info { flex: 1; min-width: 0; }
+.page-btn-seller {
+  font-family: var(--font-mono); font-size: 11px;
+  letter-spacing: 0.2em; margin-bottom: 2px; color: var(--accent);
+}
+.page-btn-page {
+  font-family: var(--font-display); font-size: 18px; font-weight: 900;
+  letter-spacing: 0.03em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.page-btn-counts {
+  display: flex; gap: 12px; margin-top: 6px;
+  font-family: var(--font-mono); font-size: 11px;
+  color: rgba(255,255,255,0.55);
+}
+.page-btn-counts strong { color: #fff; font-weight: 700; }
+.page-btn-plus {
+  width: 50px; height: 50px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  color: #0a0118; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display); font-weight: 900; font-size: 22px;
+  box-shadow: 0 4px 16px var(--accent-80, rgba(180,124,255,0.8));
+}
+
+/* Summary table */
+.cp-summary {
+  margin-top: 32px;
+  background: rgba(20,8,40,0.6);
+  border: 1px solid rgba(180,124,255,0.2);
+  border-radius: 14px; overflow: hidden;
+}
+.cp-summary-head {
+  padding: 12px 18px;
+  border-bottom: 1px solid rgba(180,124,255,0.2);
+  font-family: var(--font-mono); font-size: 12px;
+  letter-spacing: 0.3em; color: rgba(180,124,255,0.9);
+}
+.summary-row {
+  display: grid; grid-template-columns: 40px 40px 1fr auto;
+  align-items: center; gap: 12px; padding: 8px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.summary-row.top { background: var(--accent-15, rgba(180,124,255,0.08)); }
+.summary-rank { font-family: var(--font-display); font-weight: 900; font-size: 16px; }
+.summary-name { font-family: var(--font-display); font-weight: 700; font-size: 14px; }
+.summary-pages { font-size: 11px; color: rgba(255,255,255,0.5); }
+.summary-total { font-family: var(--font-display); font-weight: 900; font-size: 18px; }
+
+/* ==============================================================
+   CEREMONIA DE CIERRE DE SEMANA
+   ============================================================== */
+.ceremony-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(5, 0, 12, 0.96);
+  backdrop-filter: blur(14px);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.6s;
+  overflow: hidden;
+}
+.ceremony-overlay.visible { opacity: 1; }
+
+.ceremony-overlay::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at center, var(--accent, #B47CFF)33 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.ceremony-tag {
+  font-family: var(--font-mono); font-size: clamp(12px, 1.5vw, 16px);
+  letter-spacing: 0.6em; color: var(--accent, #FFD93D);
+  margin-bottom: 24px; opacity: 0;
+  text-transform: uppercase;
+  text-shadow: 0 0 20px var(--accent);
+  animation: pop-in 0.6s ease 3.2s forwards;
+  position: relative; z-index: 2;
+}
+
+.ceremony-stage {
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  width: clamp(220px, 30vw, 320px);
+  height: clamp(220px, 30vw, 320px);
+  margin-bottom: 24px;
+}
+
+.ceremony-rings {
+  position: absolute; inset: -10%;
+  border-radius: 50%;
+  border: 2px dashed var(--accent);
+  opacity: 0.4;
+  animation: spin-reveal 8s linear infinite;
+}
+.ceremony-rings::after {
+  content: ''; position: absolute; inset: 18%;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+  opacity: 0.6;
+  animation: spin-reveal 6s linear infinite reverse;
+}
+
+.ceremony-avatar {
+  width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  filter: drop-shadow(0 0 30px var(--accent)) drop-shadow(0 0 60px var(--accent));
+  transform-style: preserve-3d;
+  /* Animación: 6 vueltas con desaceleración */
+  animation: ceremony-roulette 3s cubic-bezier(0.18, 0.7, 0.2, 1) forwards;
+}
+
+@keyframes ceremony-roulette {
+  0%   { transform: scale(0.3) rotateY(0deg);    opacity: 0; }
+  10%  { opacity: 1; }
+  100% { transform: scale(1) rotateY(2160deg);   opacity: 1; }
+}
+
+.ceremony-name {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: clamp(40px, 7vw, 88px);
+  background: linear-gradient(180deg, var(--accent), var(--accent-alt));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 40px var(--accent));
+  letter-spacing: 0.06em; line-height: 1;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: pop-in 0.8s cubic-bezier(.5,1.5,.5,1) 3.4s forwards;
+  position: relative; z-index: 2;
+}
+
+.ceremony-stats {
+  display: flex; gap: clamp(20px, 4vw, 50px);
+  margin-bottom: 24px;
+  position: relative; z-index: 2;
+  opacity: 0;
+  animation: pop-in 0.6s ease 3.7s forwards;
+}
+.ceremony-stat {
+  text-align: center;
+  padding: 14px 22px;
+  background: rgba(20,8,40,0.6);
+  border: 1px solid var(--accent-50, rgba(180,124,255,0.5));
+  border-radius: 14px;
+  min-width: 180px;
+}
+.ceremony-stat-label {
+  font-family: var(--font-mono); font-size: 10px;
+  letter-spacing: 0.3em; color: rgba(255,255,255,0.6);
+  margin-bottom: 6px;
+}
+.ceremony-stat-value {
+  font-family: var(--font-display); font-weight: 900; font-size: 28px;
+  color: var(--accent);
+  text-shadow: 0 0 20px var(--accent);
+  line-height: 1;
+}
+.ceremony-stat-value.small { font-size: 18px; }
+
+.ceremony-actions {
+  display: flex; gap: 12px;
+  margin-top: 12px;
+  position: relative; z-index: 2;
+  opacity: 0;
+  animation: pop-in 0.4s ease 4.0s forwards;
+}
+.ceremony-actions button {
+  padding: 12px 24px; border-radius: 10px;
+  font-family: var(--font-display); font-weight: 900;
+  letter-spacing: 0.15em; font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ceremony-actions .btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-alt));
+  color: #0a0118; border: none;
+  box-shadow: 0 4px 16px var(--accent);
+}
+.ceremony-actions .btn-primary:hover { transform: translateY(-2px); }
+.ceremony-actions .btn-secondary {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.3);
+  color: #fff;
+}
+
+/* Mobile */
+@media (max-width: 900px) {
+  .lb-wrap { padding: 12px 8px 24px; }
+  .lb-header { grid-template-columns: 1fr; gap: 12px; text-align: center; }
+  .hud-stat.right { text-align: center; }
+  .podium { gap: 8px; height: clamp(360px, 60vh, 480px); padding: 0 4px; }
+  .pillar { padding: 12px 8px 10px; }
+  .pillar-rank { font-size: 20px; }
+  .pillar.rank-0 .pillar-rank { font-size: 26px; }
+  .pillar-name { font-size: 12px; }
+  .pillar.rank-0 .pillar-name { font-size: 14px; }
+  .pillar-tag { font-size: 8px; letter-spacing: 0.15em; }
+  .bar-v-num { font-size: 16px; top: 4px; }
+  .pillar.rank-0 .bar-v-num { font-size: 22px; }
+  .top-nav { top: 6px; right: 6px; }
+  .top-nav button { padding: 6px 10px; font-size: 10px; }
+  .ceremony-stats { flex-direction: column; gap: 10px; }
+  .ceremony-stat { min-width: 240px; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<nav class="top-nav">
+  <button data-view="leaderboard">⛨ ARENA</button>
+  <button data-view="control">⚙ PANEL</button>
+</nav>
+
+<!-- VISTA: LEADERBOARD -->
+<div id="view-leaderboard" class="view active">
+  <div class="lb-wrap">
+    <header class="lb-header">
+      <div class="hud-stat">
+        <div class="label">▸ VENTAS DE LA SEMANA</div>
+        <div class="value" id="totalSales" style="color: #5EEAD4; text-shadow: 0 0 20px #5EEAD4;">0</div>
+      </div>
+      <div class="title-block">
+        <div class="title-tag">TEC CAPITAL × IPCI</div>
+        <h1 class="title-main">SALES ARENA</h1>
+        <div class="title-sub"><span class="live-dot"></span>EN VIVO · TOP 4</div>
+      </div>
+      <div class="hud-stat right">
+        <div class="label">▸ HORA</div>
+        <div class="value mono" id="clock" style="color: #FFD93D; text-shadow: 0 0 20px #FFD93D;">--:--:--</div>
+      </div>
+    </header>
+
+    <div class="podium-wrap">
+      <div class="podium" id="podium"></div>
+      <div id="benchHost"></div>
+    </div>
+  </div>
+</div>
+
+<!-- VISTA: CONTROL PANEL -->
+<div id="view-control" class="view">
+  <div class="cp-wrap">
+    <header class="cp-header">
+      <div class="cp-header-left">
+        <div class="cp-header-tag">◆ PANEL DE CONTROL ◆</div>
+        <h1 class="cp-header-title">REGISTRO DE VENTAS</h1>
+      </div>
+      <div class="cp-actions">
+        <button class="btn-week" id="btnWeek">🏁 CERRAR SEMANA</button>
+        <button class="btn-ghost" id="btnUndo">↩ DESHACER</button>
+        <button class="btn-danger" id="btnReset">⟳ RESET</button>
+      </div>
+    </header>
+
+    <div class="cp-stats" id="cpStats"></div>
+    <div class="cp-grid" id="cpGrid"></div>
+    <div class="cp-summary">
+      <div class="cp-summary-head">◆ RANKING COMPLETO</div>
+      <div id="cpSummaryBody"></div>
+    </div>
+  </div>
+</div>
+
+<div id="eventLayer"></div>
+<div id="ceremonyHost"></div>
+
+<script>
+/* ============================================================
+   SALES ARENA v2 — Lógica
+   ============================================================ */
+
+const SELLERS = [
+  { id: 'josue',   name: 'Josué',     avatar: 'wolf',    color: '#6BC9FF', colorAlt: '#3FA3F0', pages: ['Sinergia-Bionova'] },
+  { id: 'ana',     name: 'Ana',       avatar: 'eagle',   color: '#FFD93D', colorAlt: '#FFB800', pages: ['AgroTec'] },
+  { id: 'jose',    name: 'José',      avatar: 'tiger',   color: '#FF8C42', colorAlt: '#FF6A1A', pages: ['Bioterra', 'Zoorigen'] },
+  { id: 'daisy',   name: 'Daisy',     avatar: 'fox',     color: '#FF4FB6', colorAlt: '#E0339A', pages: ['IMDIIL', 'GlobalVet'] },
+  { id: 'daniela', name: 'Daniela',   avatar: 'panther', color: '#B47CFF', colorAlt: '#9656FF', pages: ['Dermalysse'] },
+  { id: 'ani',     name: 'Ani Reyes', avatar: 'falcon',  color: '#5EEAD4', colorAlt: '#2DD4BF', pages: ['Synova'] },
+  { id: 'eli',     name: 'Eli',       avatar: 'lion',    color: '#FFAA33', colorAlt: '#FF8800', pages: ['Visión Pecuaria', 'Ingeniería Avícola'] },
+  { id: 'anni',    name: 'Anni',      avatar: 'owl',     color: '#9D7CFF', colorAlt: '#7C5CE6', pages: ['ICADEM', 'IMDAC'] },
+  { id: 'carla',   name: 'Carla',     avatar: 'dragon',  color: '#FF6FA8', colorAlt: '#FF4787', pages: ['Fisiotec', 'Odonteck'] }
+];
+
+const SELLER_BY_ID = Object.fromEntries(SELLERS.map(s => [s.id, s]));
+const SELLER_BY_PAGE = (() => { const m = {}; SELLERS.forEach(s => s.pages.forEach(p => { m[p] = s.id; })); return m; })();
+
+const STORAGE_KEY  = 'sales-arena-state-v2';
+const CEREMONY_KEY = 'sales-arena-ceremony-v2';
+const RANK_LABELS = ['CHAMPION', 'CHALLENGER', 'CONTENDER', 'RIVAL'];
+const RANK_MEDALS = ['🏆', '🥈', '🥉', '⚔️'];
+
+let state = loadState();
+let prevTopIds = [];
+let prevLeader = null;
+
+function buildInitialState() {
+  const sellers = {}, pages = {};
+  SELLERS.forEach(s => { sellers[s.id] = 0; s.pages.forEach(p => { pages[p] = 0; }); });
+  return { sellers, pages, history: [] };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return buildInitialState();
+    const p = JSON.parse(raw);
+    if (!p.sellers || !p.pages) return buildInitialState();
+    return p;
+  } catch (e) { return buildInitialState(); }
+}
+
+function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+function getRanked() {
+  return SELLERS
+    .map(s => ({ ...s, total: state.sellers[s.id] || 0 }))
+    .sort((a, b) => (b.total - a.total) || a.name.localeCompare(b.name));
+}
+
+// ============== Sales actions ==============
+function addSale(page) {
+  const sellerId = SELLER_BY_PAGE[page];
+  if (!sellerId) return;
+
+  const beforeTop4 = getRanked().slice(0, 4).map(r => r.id);
+  const wasInTop4 = beforeTop4.includes(sellerId);
+
+  state.sellers[sellerId] = (state.sellers[sellerId] || 0) + 1;
+  state.pages[page]       = (state.pages[page]       || 0) + 1;
+  state.history.push({ sellerId, page, ts: Date.now() });
+  if (state.history.length > 200) state.history.shift();
+  saveState();
+
+  if (wasInTop4) fireEvent({ type: 'SALE_TOP', sellerId });
+  else           fireEvent({ type: 'SALE_OUTSIDER', sellerId });
+
+  renderAll();
+  detectClimbAndLeader(beforeTop4);
+}
+
+function detectClimbAndLeader(beforeTop4) {
+  const ranked = getRanked();
+  const newTop4 = ranked.slice(0, 4).map(r => r.id);
+  const newLeader = ranked[0]?.id;
+
+  if (prevLeader && newLeader !== prevLeader) {
+    fireEvent({ type: 'NEW_LEADER', sellerId: newLeader });
+  }
+  if (beforeTop4.length === 4) {
+    newTop4.forEach((id, newIdx) => {
+      const oldIdx = beforeTop4.indexOf(id);
+      if (oldIdx === -1 || newIdx < oldIdx) {
+        fireEvent({ type: 'CLIMB', sellerId: id });
+      }
+    });
+  }
+  prevTopIds = newTop4;
+  prevLeader = newLeader;
+}
+
+function undoLastSale() {
+  if (!state.history.length) return;
+  const last = state.history.pop();
+  state.sellers[last.sellerId] = Math.max(0, (state.sellers[last.sellerId] || 0) - 1);
+  state.pages[last.page]       = Math.max(0, (state.pages[last.page]       || 0) - 1);
+  saveState();
+  renderAll();
+}
+
+function resetAll() {
+  state = buildInitialState();
+  prevTopIds = [];
+  prevLeader = null;
+  saveState();
+  renderAll();
+}
+
+// ============== Avatar SVG ==============
+function avatarSVG(kind, color, colorAlt, size = 80) {
+  const id = `${kind}-${Math.random().toString(36).slice(2, 7)}`;
+  const baseDefs = `
+    <defs>
+      <linearGradient id="${id}-grad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="${color}"/>
+        <stop offset="100%" stop-color="${colorAlt}"/>
+      </linearGradient>
+      <linearGradient id="${id}-soft" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${color}" stop-opacity="0.9"/>
+        <stop offset="100%" stop-color="${colorAlt}" stop-opacity="0.5"/>
+      </linearGradient>
+      <radialGradient id="${id}-eye">
+        <stop offset="0%" stop-color="#fff"/>
+        <stop offset="50%" stop-color="${color}"/>
+        <stop offset="100%" stop-color="${colorAlt}"/>
+      </radialGradient>
+    </defs>`;
+
+  const bodies = {
+    wolf: `
+      <polygon points="25,40 35,15 50,38" fill="url(#${id}-grad)"/>
+      <polygon points="95,40 85,15 70,38" fill="url(#${id}-grad)"/>
+      <path d="M30 45 Q60 25 90 45 Q95 75 80 95 Q60 110 40 95 Q25 75 30 45 Z" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <path d="M48 75 Q60 90 72 75 L70 95 Q60 105 50 95 Z" fill="#0a0118" stroke="${color}" stroke-width="1.5"/>
+      <ellipse cx="60" cy="80" rx="5" ry="3" fill="${color}"/>
+      <ellipse cx="45" cy="62" rx="6" ry="8" fill="#0a0118"/>
+      <ellipse cx="75" cy="62" rx="6" ry="8" fill="#0a0118"/>
+      <ellipse cx="45" cy="62" rx="3" ry="5" fill="url(#${id}-eye)"/>
+      <ellipse cx="75" cy="62" rx="3" ry="5" fill="url(#${id}-eye)"/>`,
+    eagle: `
+      <path d="M30 60 Q60 20 90 60 Q90 90 60 100 Q30 90 30 60 Z" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <path d="M50 40 L60 22 L70 40 Z" fill="url(#${id}-grad)"/>
+      <path d="M55 75 L60 95 L65 75 Z" fill="${colorAlt}" stroke="#0a0118" stroke-width="1"/>
+      <line x1="60" y1="75" x2="60" y2="95" stroke="#0a0118" stroke-width="1.5"/>
+      <path d="M38 58 L52 64 L40 70 Z" fill="#0a0118"/>
+      <path d="M82 58 L68 64 L80 70 Z" fill="#0a0118"/>
+      <circle cx="44" cy="64" r="2.5" fill="${color}"/>
+      <circle cx="76" cy="64" r="2.5" fill="${color}"/>`,
+    tiger: `
+      <path d="M28 38 Q22 22 38 28 Z" fill="${color}"/>
+      <path d="M92 38 Q98 22 82 28 Z" fill="${color}"/>
+      <ellipse cx="60" cy="65" rx="35" ry="35" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <path d="M40 40 Q42 50 38 55" stroke="#0a0118" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M50 35 Q52 45 48 50" stroke="#0a0118" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M70 35 Q68 45 72 50" stroke="#0a0118" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M80 40 Q78 50 82 55" stroke="#0a0118" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <ellipse cx="60" cy="80" rx="20" ry="14" fill="#fff8e1" opacity="0.9"/>
+      <path d="M55 73 Q60 70 65 73 L62 78 L58 78 Z" fill="#0a0118"/>
+      <ellipse cx="45" cy="60" rx="7" ry="6" fill="#0a0118"/>
+      <ellipse cx="75" cy="60" rx="7" ry="6" fill="#0a0118"/>
+      <ellipse cx="45" cy="60" rx="3" ry="4" fill="url(#${id}-eye)"/>
+      <ellipse cx="75" cy="60" rx="3" ry="4" fill="url(#${id}-eye)"/>
+      <path d="M56 86 L55 92 L58 89 Z" fill="#fff"/>
+      <path d="M64 86 L65 92 L62 89 Z" fill="#fff"/>`,
+    fox: `
+      <polygon points="22,50 28,15 48,42" fill="url(#${id}-grad)"/>
+      <polygon points="98,50 92,15 72,42" fill="url(#${id}-grad)"/>
+      <polygon points="28,42 32,22 42,40" fill="#0a0118"/>
+      <polygon points="92,42 88,22 78,40" fill="#0a0118"/>
+      <path d="M30 50 Q60 35 90 50 Q90 80 60 100 Q30 80 30 50 Z" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <ellipse cx="35" cy="78" rx="14" ry="12" fill="#fff" opacity="0.95"/>
+      <ellipse cx="85" cy="78" rx="14" ry="12" fill="#fff" opacity="0.95"/>
+      <path d="M50 75 Q60 90 70 75 L62 95 L58 95 Z" fill="#fff"/>
+      <ellipse cx="60" cy="78" rx="4" ry="3" fill="#0a0118"/>
+      <path d="M40 60 Q48 56 52 64 Q48 68 40 60" fill="#0a0118"/>
+      <path d="M80 60 Q72 56 68 64 Q72 68 80 60" fill="#0a0118"/>
+      <circle cx="46" cy="62" r="2" fill="${color}"/>
+      <circle cx="74" cy="62" r="2" fill="${color}"/>`,
+    panther: `
+      <circle cx="32" cy="35" r="10" fill="#1a0a2e" stroke="${color}" stroke-width="2"/>
+      <circle cx="88" cy="35" r="10" fill="#1a0a2e" stroke="${color}" stroke-width="2"/>
+      <circle cx="32" cy="35" r="5" fill="${color}"/>
+      <circle cx="88" cy="35" r="5" fill="${color}"/>
+      <ellipse cx="60" cy="65" rx="34" ry="34" fill="#0f0420" stroke="${color}" stroke-width="2.5"/>
+      <ellipse cx="45" cy="60" rx="9" ry="6" fill="${color}"/>
+      <ellipse cx="75" cy="60" rx="9" ry="6" fill="${color}"/>
+      <ellipse cx="45" cy="60" rx="2" ry="6" fill="#0a0118"/>
+      <ellipse cx="75" cy="60" rx="2" ry="6" fill="#0a0118"/>
+      <path d="M50 78 Q60 88 70 78 L65 90 L55 90 Z" fill="#1a0a2e"/>
+      <path d="M55 80 Q60 76 65 80 L62 84 L58 84 Z" fill="${color}"/>`,
+    falcon: `
+      <path d="M40 35 Q60 15 80 35 L75 45 Q60 30 45 45 Z" fill="url(#${id}-grad)"/>
+      <path d="M28 55 Q60 35 92 55 Q92 88 60 100 Q28 88 28 55 Z" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <path d="M28 60 Q60 55 92 60 L92 70 Q60 65 28 70 Z" fill="#0a0118" opacity="0.8"/>
+      <circle cx="42" cy="65" r="4" fill="${color}"/>
+      <circle cx="78" cy="65" r="4" fill="${color}"/>
+      <circle cx="42" cy="65" r="1.5" fill="#fff"/>
+      <circle cx="78" cy="65" r="1.5" fill="#fff"/>
+      <path d="M52 78 Q60 95 68 78 L64 92 L60 96 L56 92 Z" fill="${colorAlt}" stroke="#0a0118" stroke-width="1"/>`,
+    lion: (() => {
+      let path = '';
+      for (let i = 0; i < 12; i++) {
+        const a = (i / 12) * Math.PI * 2;
+        const cx = 60 + Math.cos(a) * 38;
+        const cy = 62 + Math.sin(a) * 38;
+        path += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="14" fill="url(#${id}-grad)" opacity="0.85"/>`;
+      }
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2 + 0.2;
+        const cx = 60 + Math.cos(a) * 28;
+        const cy = 62 + Math.sin(a) * 28;
+        path += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="11" fill="${colorAlt}"/>`;
+      }
+      path += `
+        <ellipse cx="60" cy="65" rx="26" ry="26" fill="#fff8e1"/>
+        <circle cx="40" cy="48" r="6" fill="${color}"/>
+        <circle cx="80" cy="48" r="6" fill="${color}"/>
+        <circle cx="40" cy="48" r="3" fill="${colorAlt}"/>
+        <circle cx="80" cy="48" r="3" fill="${colorAlt}"/>
+        <ellipse cx="50" cy="62" rx="4" ry="5" fill="#0a0118"/>
+        <ellipse cx="70" cy="62" rx="4" ry="5" fill="#0a0118"/>
+        <path d="M55 72 Q60 68 65 72 L62 78 L58 78 Z" fill="#0a0118"/>
+        <path d="M60 78 L60 84 M55 84 Q60 90 65 84" stroke="#0a0118" stroke-width="1.5" fill="none"/>`;
+      return path;
+    })(),
+    owl: `
+      <path d="M60 18 L70 35 L85 25 L82 42 L98 45 L88 58 L98 68 L85 75 L82 90 L70 80 L60 95 L50 80 L38 90 L35 75 L22 68 L32 58 L22 45 L38 42 L35 25 L50 35 Z" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <ellipse cx="60" cy="62" rx="32" ry="30" fill="url(#${id}-soft)"/>
+      <circle cx="45" cy="60" r="14" fill="#fff8e1" opacity="0.95"/>
+      <circle cx="75" cy="60" r="14" fill="#fff8e1" opacity="0.95"/>
+      <circle cx="45" cy="60" r="9" fill="#0a0118"/>
+      <circle cx="75" cy="60" r="9" fill="#0a0118"/>
+      <circle cx="45" cy="60" r="6" fill="${color}"/>
+      <circle cx="75" cy="60" r="6" fill="${color}"/>
+      <circle cx="46" cy="58" r="2" fill="#fff"/>
+      <circle cx="76" cy="58" r="2" fill="#fff"/>
+      <path d="M55 72 L60 82 L65 72 Z" fill="${colorAlt}" stroke="#0a0118" stroke-width="1"/>`,
+    dragon: `
+      <path d="M30 40 L20 15 L38 32 Z" fill="url(#${id}-grad)"/>
+      <path d="M90 40 L100 15 L82 32 Z" fill="url(#${id}-grad)"/>
+      <path d="M50 22 L55 12 L60 22" fill="${colorAlt}"/>
+      <path d="M60 22 L65 12 L70 22" fill="${colorAlt}"/>
+      <path d="M28 55 Q60 30 92 55 L88 80 Q60 105 32 80 Z" fill="url(#${id}-soft)" stroke="${color}" stroke-width="2"/>
+      <ellipse cx="44" cy="62" rx="7" ry="9" fill="#0a0118"/>
+      <ellipse cx="76" cy="62" rx="7" ry="9" fill="#0a0118"/>
+      <ellipse cx="44" cy="62" rx="2.5" ry="7" fill="${color}"/>
+      <ellipse cx="76" cy="62" rx="2.5" ry="7" fill="${color}"/>
+      <ellipse cx="50" cy="80" rx="2" ry="3" fill="#0a0118"/>
+      <ellipse cx="70" cy="80" rx="2" ry="3" fill="#0a0118"/>
+      <path d="M48 88 Q55 92 62 88 Q68 92 75 88" stroke="#0a0118" stroke-width="2" fill="none"/>
+      <path d="M52 88 L50 96 L54 92 Z" fill="#fff"/>
+      <path d="M68 88 L70 96 L66 92 Z" fill="#fff"/>`
+  };
+
+  return `<svg width="${size}" height="${size}" viewBox="0 0 120 120">${baseDefs}${bodies[kind] || bodies.wolf}</svg>`;
+}
+
+// ============== Render Podium ==============
+function renderLeaderboard() {
+  const ranked = getRanked();
+  const top4 = ranked.slice(0, 4);
+  const max = ranked[0]?.total || 1;
+  const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+  document.getElementById('totalSales').textContent = total;
+
+  const podium = document.getElementById('podium');
+
+  // Capturar info previa para preservar elementos en lugar de reemplazar
+  const existing = {};
+  Array.from(podium.children).forEach(el => {
+    const id = el.dataset.sellerId;
+    if (id) existing[id] = el;
+  });
+
+  // Construir nuevo orden
+  podium.innerHTML = '';
+  top4.forEach((s, i) => {
+    const pct = max > 0 ? (s.total / max) * 100 : 0;
+    const isFirst = i === 0;
+    const accentVars = `--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-15: ${s.color}26; --accent-30: ${s.color}4d; --accent-40: ${s.color}66; --accent-50: ${s.color}80; --accent-55: ${s.color}8c; --accent-80: ${s.color}cc;`;
+    const isLeader = isFirst && s.total > 0;
+
+    const el = document.createElement('div');
+    el.className = `pillar rank-${i}`;
+    el.dataset.sellerId = s.id;
+    el.style.cssText = accentVars;
+
+    el.innerHTML = `
+      <span class="hud-corner tl"></span>
+      <span class="hud-corner tr"></span>
+      <span class="hud-corner bl"></span>
+      <span class="hud-corner br"></span>
+
+      <div class="pillar-head">
+        <div class="pillar-rank">#${i + 1}</div>
+        <div class="pillar-medal">${RANK_MEDALS[i]}</div>
+      </div>
+
+      <div class="pillar-avatar" data-avatar>
+        ${avatarSVG(s.avatar, s.color, s.colorAlt, isFirst ? 110 : 86)}
+      </div>
+
+      <div class="pillar-name">${s.name}</div>
+      <div class="pillar-tag">[ ${RANK_LABELS[i]} ]${isLeader ? ' ◆ LEADER' : ''}</div>
+
+      <div class="bar-v">
+        <div class="bar-v-num">${s.total}</div>
+        <div class="bar-v-fill" style="height: ${pct}%"></div>
+        <div class="bar-v-ticks"></div>
+        <div class="bar-v-sparks"></div>
+      </div>
+    `;
+
+    podium.appendChild(el);
+  });
+
+  // Bench
+  const benchHost = document.getElementById('benchHost');
+  if (ranked.length > 4) {
+    const benchHtml = `
+      <div class="bench">
+        <div class="bench-label">▾ BANCA</div>
+        ${ranked.slice(4).map((s, i) => `
+          <div class="bench-chip" style="--accent: ${s.color}; --accent-15: ${s.color}30; --accent-40: ${s.color}66;">
+            <span class="bench-chip-rank">#${i + 5}</span>
+            ${s.name}
+            <span class="bench-chip-num">${s.total}</span>
+          </div>`).join('')}
+      </div>`;
+    benchHost.innerHTML = benchHtml;
+  } else {
+    benchHost.innerHTML = '';
+  }
+}
+
+// ============== Render Control Panel ==============
+function renderControlPanel() {
+  const ranked = getRanked();
+  const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+  const totalPages = SELLERS.reduce((s, x) => s + x.pages.length, 0);
+  const leaderName = ranked[0]?.total > 0 ? ranked[0].name : '—';
+
+  document.getElementById('cpStats').innerHTML = `
+    <div class="stat-card" style="--accent: #5EEAD4; --accent-40: #5EEAD466; --accent-80: #5EEAD4cc;">
+      <div class="label">VENTAS DE LA SEMANA</div>
+      <div class="value" style="color: #5EEAD4;">${total}</div>
+    </div>
+    <div class="stat-card" style="--accent: #FFD93D; --accent-40: #FFD93D66; --accent-80: #FFD93Dcc;">
+      <div class="label">LÍDER ACTUAL</div>
+      <div class="value" style="color: #FFD93D;">${leaderName}</div>
+    </div>
+    <div class="stat-card" style="--accent: #B47CFF; --accent-40: #B47CFF66; --accent-80: #B47CFFcc;">
+      <div class="label">VENDEDORES</div>
+      <div class="value" style="color: #B47CFF;">${SELLERS.length}</div>
+    </div>
+    <div class="stat-card" style="--accent: #FF4FB6; --accent-40: #FF4FB666; --accent-80: #FF4FB6cc;">
+      <div class="label">PÁGINAS</div>
+      <div class="value" style="color: #FF4FB6;">${totalPages}</div>
+    </div>
+  `;
+
+  const allPages = SELLERS.flatMap(s => s.pages.map(p => ({ page: p, sellerId: s.id })));
+  document.getElementById('cpGrid').innerHTML = allPages.map(({ page, sellerId }) => {
+    const s = SELLER_BY_ID[sellerId];
+    const accentVars = `--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-50: ${s.color}80; --accent-80: ${s.color}cc;`;
+    return `
+    <button class="page-btn" data-page="${page}" style="${accentVars}">
+      <span class="page-btn-glow"></span>
+      <div class="page-btn-row">
+        <div style="filter: drop-shadow(0 0 8px ${s.color});">${avatarSVG(s.avatar, s.color, s.colorAlt, 56)}</div>
+        <div class="page-btn-info">
+          <div class="page-btn-seller">▸ ${s.name.toUpperCase()}</div>
+          <div class="page-btn-page">${page}</div>
+          <div class="page-btn-counts">
+            <span>página: <strong>${state.pages[page] || 0}</strong></span>
+            <span>vendedor: <strong style="color: ${s.color}">${state.sellers[sellerId] || 0}</strong></span>
+          </div>
+        </div>
+        <div class="page-btn-plus">+1</div>
+      </div>
+    </button>`;
+  }).join('');
+
+  document.querySelectorAll('.page-btn').forEach(btn => {
+    btn.addEventListener('click', () => addSale(btn.dataset.page));
+  });
+
+  document.getElementById('cpSummaryBody').innerHTML = ranked.map((s, i) => {
+    const isTop = i < 4;
+    return `
+    <div class="summary-row ${isTop ? 'top' : ''}" style="--accent: ${s.color}; --accent-15: ${s.color}20;">
+      <span class="summary-rank" style="color: ${isTop ? s.color : 'rgba(255,255,255,0.3)'}">#${i + 1}</span>
+      <div>${avatarSVG(s.avatar, s.color, s.colorAlt, 28)}</div>
+      <div>
+        <div class="summary-name">${s.name}</div>
+        <div class="summary-pages">${s.pages.join(' · ')}</div>
+      </div>
+      <span class="summary-total" style="color: ${s.color}; ${isTop ? `text-shadow: 0 0 10px ${s.color};` : ''}">${s.total}</span>
+    </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  renderLeaderboard();
+  renderControlPanel();
+  resetIdleTimer();
+}
+
+// ============== Eventos visuales ==============
+function fireEvent(ev) {
+  const seller = SELLER_BY_ID[ev.sellerId];
+  if (!seller) return;
+
+  if (ev.type === 'SALE_TOP') {
+    // bounce avatar + bump number + spark + flying plus
+    setTimeout(() => {
+      const pillar = document.querySelector(`.pillar[data-seller-id="${seller.id}"]`);
+      if (!pillar) return;
+      const avatar = pillar.querySelector('[data-avatar]');
+      if (avatar) {
+        avatar.classList.remove('bounce'); void avatar.offsetWidth;
+        avatar.classList.add('bounce');
+      }
+      const num = pillar.querySelector('.bar-v-num');
+      if (num) {
+        num.classList.remove('bump'); void num.offsetWidth;
+        num.classList.add('bump');
+      }
+      // Spark dentro de la barra
+      spawnSpark(pillar, seller.color);
+    }, 60);
+    flyingPlus(seller.color);
+  }
+  if (ev.type === 'SALE_OUTSIDER') {
+    outsiderPop(seller);
+    smallConfetti(seller.color);
+  }
+  if (ev.type === 'CLIMB') {
+    setTimeout(() => {
+      const pillar = document.querySelector(`.pillar[data-seller-id="${seller.id}"]`);
+      if (!pillar) return;
+      pillar.classList.remove('glow'); void pillar.offsetWidth;
+      pillar.classList.add('glow');
+      const avatar = pillar.querySelector('[data-avatar]');
+      if (avatar) {
+        avatar.classList.remove('spin'); void avatar.offsetWidth;
+        avatar.classList.add('spin');
+      }
+      // Climb badge
+      const badge = document.createElement('div');
+      badge.className = 'climb-badge';
+      badge.textContent = '▲ SUBE';
+      pillar.appendChild(badge);
+      setTimeout(() => badge.remove(), 2400);
+    }, 80);
+  }
+  if (ev.type === 'NEW_LEADER') {
+    showLeaderBanner(seller);
+    bigConfetti(seller.color, seller.colorAlt);
+  }
+}
+
+function spawnSpark(pillar, color) {
+  const sparksHost = pillar.querySelector('.bar-v-sparks');
+  if (!sparksHost) return;
+  for (let i = 0; i < 5; i++) {
+    const sp = document.createElement('span');
+    sp.className = 'spark';
+    sp.style.left = (10 + Math.random() * 80) + '%';
+    sp.style.bottom = (Math.random() * 20) + '%';
+    sp.style.background = color;
+    sp.style.boxShadow = `0 0 8px ${color}, 0 0 16px ${color}`;
+    sp.style.animationDelay = (i * 0.08) + 's';
+    sparksHost.appendChild(sp);
+    setTimeout(() => sp.remove(), 1700);
+  }
+}
+
+function flyingPlus(color) {
+  const el = document.createElement('div');
+  el.className = 'float-plus';
+  el.textContent = '+1';
+  el.style.color = color;
+  el.style.textShadow = `0 0 20px ${color}, 0 0 40px ${color}`;
+  el.style.left = (40 + Math.random() * 60) + '%';
+  el.style.top = '40%';
+  document.getElementById('eventLayer').appendChild(el);
+  setTimeout(() => el.remove(), 1400);
+}
+
+function outsiderPop(seller) {
+  const el = document.createElement('div');
+  el.className = 'outsider-pop';
+  el.style.cssText += `--accent: ${seller.color}; --accent-alt: ${seller.colorAlt}; border: 2px solid ${seller.color}; box-shadow: 0 0 60px ${seller.color}, 0 10px 40px rgba(0,0,0,0.6);`;
+  el.innerHTML = `
+    <div style="filter: drop-shadow(0 0 8px ${seller.color});">${avatarSVG(seller.avatar, seller.color, seller.colorAlt, 56)}</div>
+    <div>
+      <div class="name" style="text-shadow: 0 0 10px ${seller.color};">${seller.name}</div>
+      <div class="plus">+1 🎉</div>
+    </div>
+  `;
+  document.getElementById('eventLayer').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 400);
+  }, 3000);
+}
+
+function showLeaderBanner(seller) {
+  const el = document.createElement('div');
+  el.className = 'leader-banner';
+  el.style.cssText += `--accent: ${seller.color}; --accent-alt: ${seller.colorAlt};`;
+  el.innerHTML = `
+    <div class="leader-inner">
+      <div class="leader-tag">◆ ◆ ◆ NUEVO LÍDER ◆ ◆ ◆</div>
+      <div class="leader-row">
+        <div style="filter: drop-shadow(0 0 14px ${seller.color}) drop-shadow(0 0 28px ${seller.color}88);">
+          ${avatarSVG(seller.avatar, seller.color, seller.colorAlt, 110)}
+        </div>
+        <div class="leader-name">${seller.name.toUpperCase()}</div>
+      </div>
+      <div class="leader-throne" style="color: ${seller.color};">TOMA EL TRONO 👑</div>
+    </div>
+  `;
+  document.getElementById('eventLayer').appendChild(el);
+  setTimeout(() => {
+    el.classList.add('leaving');
+    setTimeout(() => el.remove(), 500);
+  }, 3500);
+}
+
+function smallConfetti(color) {
+  if (typeof confetti === 'undefined') return;
+  confetti({
+    particleCount: 80, spread: 70,
+    origin: { x: 0.15, y: 0.85 },
+    colors: [color, '#FFD93D', '#fff', '#B47CFF'],
+    scalar: 0.9
+  });
+}
+
+function bigConfetti(c1, c2) {
+  if (typeof confetti === 'undefined') return;
+  const end = Date.now() + 2500;
+  (function frame() {
+    confetti({ particleCount: 5, angle: 60, spread: 70, origin: { x: 0 }, colors: [c1, c2, '#fff', '#FFD93D'] });
+    confetti({ particleCount: 5, angle: 120, spread: 70, origin: { x: 1 }, colors: [c1, c2, '#fff', '#FFD93D'] });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  })();
+  confetti({
+    particleCount: 200, spread: 120,
+    origin: { x: 0.5, y: 0.5 },
+    colors: [c1, c2, '#fff', '#FFD93D', '#5EEAD4'],
+    scalar: 1.2, startVelocity: 50
+  });
+}
+
+// ==============================================================
+// CEREMONIA DE CIERRE DE SEMANA
+// ==============================================================
+function closeWeek(triggeredLocally = true) {
+  const ranked = getRanked();
+  const winner = ranked[0];
+  if (!winner || winner.total === 0) {
+    alert('Aún no hay ventas registradas para cerrar la semana.');
+    return;
+  }
+
+  // Mejor consultora del ganador (página con más ventas dentro de las suyas)
+  let bestPage = null, bestPageCount = 0;
+  winner.pages.forEach(p => {
+    const c = state.pages[p] || 0;
+    if (c > bestPageCount) { bestPageCount = c; bestPage = p; }
+  });
+  if (!bestPage) bestPage = winner.pages[0];
+
+  const data = {
+    sellerId: winner.id,
+    name: winner.name,
+    avatar: winner.avatar,
+    color: winner.color,
+    colorAlt: winner.colorAlt,
+    total: winner.total,
+    bestPage,
+    bestPageCount,
+    ts: Date.now()
+  };
+
+  if (triggeredLocally) {
+    // Broadcast para otras pestañas
+    try { localStorage.setItem(CEREMONY_KEY, JSON.stringify(data)); } catch (e) {}
+  }
+
+  showCeremony(data);
+}
+
+function showCeremony(data) {
+  const host = document.getElementById('ceremonyHost');
+  host.innerHTML = '';
+
+  const overlay = document.createElement('div');
+  overlay.className = 'ceremony-overlay';
+  overlay.style.cssText = `--accent: ${data.color}; --accent-alt: ${data.colorAlt};`;
+
+  overlay.innerHTML = `
+    <div class="ceremony-stage">
+      <div class="ceremony-rings"></div>
+      <div class="ceremony-avatar">
+        ${avatarSVG(data.avatar, data.color, data.colorAlt, 280)}
+      </div>
+    </div>
+    <div class="ceremony-tag">◆ ◆ ◆  GANADOR DE LA SEMANA  ◆ ◆ ◆</div>
+    <div class="ceremony-name">${data.name.toUpperCase()}</div>
+    <div class="ceremony-stats">
+      <div class="ceremony-stat">
+        <div class="ceremony-stat-label">TOTAL DE VENTAS</div>
+        <div class="ceremony-stat-value">${data.total}</div>
+      </div>
+      <div class="ceremony-stat">
+        <div class="ceremony-stat-label">CONSULTORA GANADORA</div>
+        <div class="ceremony-stat-value small">${data.bestPage}</div>
+        <div class="ceremony-stat-label" style="margin-top: 6px;">${data.bestPageCount} ventas</div>
+      </div>
+    </div>
+    <div class="ceremony-actions">
+      <button class="btn-primary" data-action="new-week">🎯 INICIAR NUEVA SEMANA</button>
+      <button class="btn-secondary" data-action="close">Cerrar</button>
+    </div>
+  `;
+
+  host.appendChild(overlay);
+  // Trigger reflow then visible
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+
+  // Confeti masivo cuando para de girar (a los 3s)
+  setTimeout(() => {
+    massiveConfetti(data.color, data.colorAlt);
+  }, 3000);
+  // Burst extra repetido
+  setTimeout(() => massiveConfetti(data.color, data.colorAlt), 4200);
+  setTimeout(() => massiveConfetti(data.color, data.colorAlt), 5200);
+
+  overlay.querySelector('[data-action="close"]').addEventListener('click', () => {
+    overlay.style.opacity = '0';
+    setTimeout(() => overlay.remove(), 600);
+  });
+
+  overlay.querySelector('[data-action="new-week"]').addEventListener('click', () => {
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+      overlay.remove();
+      resetAll();
+    }, 600);
+  });
+}
+
+function massiveConfetti(c1, c2) {
+  if (typeof confetti === 'undefined') return;
+  confetti({
+    particleCount: 250, spread: 160,
+    origin: { x: 0.5, y: 0.4 },
+    colors: [c1, c2, '#fff', '#FFD93D', '#5EEAD4', '#B47CFF', '#FF4FB6'],
+    scalar: 1.4, startVelocity: 60, ticks: 300
+  });
+  confetti({ particleCount: 100, spread: 100, origin: { x: 0, y: 0.5 },
+    colors: [c1, c2, '#fff'], angle: 60, startVelocity: 55 });
+  confetti({ particleCount: 100, spread: 100, origin: { x: 1, y: 0.5 },
+    colors: [c1, c2, '#fff'], angle: 120, startVelocity: 55 });
+}
+
+// ============== Idle Mode ==============
+let idleTimer = null;
+let idleEl = null;
+function resetIdleTimer() {
+  if (idleTimer) clearTimeout(idleTimer);
+  if (idleEl) idleEl.classList.remove('visible');
+  particlesIntensity = 1.2;
+  const total = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+  if (total === 0) return;
+  idleTimer = setTimeout(showIdle, 30000);
+}
+
+function showIdle() {
+  if (!idleEl) {
+    idleEl = document.createElement('div');
+    idleEl.className = 'idle-banner';
+    idleEl.innerHTML = `<span class="idle-dot"></span> ESPERANDO VENTAS <span class="idle-dot"></span>`;
+    document.body.appendChild(idleEl);
+  }
+  idleEl.classList.add('visible');
+  particlesIntensity = 0.4;
+}
+
+// ============== Particles ==============
+let particlesIntensity = 1.2;
+(function initParticles() {
+  const canvas = document.getElementById('particles');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+
+  function resize() {
+    canvas.width  = window.innerWidth  * window.devicePixelRatio;
+    canvas.height = window.innerHeight * window.devicePixelRatio;
+    canvas.style.width  = window.innerWidth  + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const colors = [
+    'rgba(255,217,61,0.9)', 'rgba(255,140,66,0.9)',
+    'rgba(107,201,255,0.9)', 'rgba(255,79,182,0.9)',
+    'rgba(94,234,212,0.9)',  'rgba(180,124,255,0.9)'
+  ];
+
+  function makeP() {
+    return {
+      x: Math.random() * window.innerWidth,
+      y: Math.random() * window.innerHeight,
+      vx: (Math.random() - 0.5) * 0.4,
+      vy: (Math.random() - 0.5) * 0.4,
+      r: Math.random() * 1.8 + 0.6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      pulse: Math.random() * Math.PI * 2
+    };
+  }
+  particles = Array.from({ length: 60 }, makeP);
+
+  function tick() {
+    const w = window.innerWidth, h = window.innerHeight;
+    ctx.clearRect(0, 0, w, h);
+    const I = particlesIntensity;
+
+    for (let a = 0; a < particles.length; a++) {
+      for (let b = a + 1; b < particles.length; b++) {
+        const dx = particles[a].x - particles[b].x;
+        const dy = particles[a].y - particles[b].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 130) {
+          const alpha = (1 - dist / 130) * 0.15 * I;
+          ctx.strokeStyle = `rgba(180,124,255,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.beginPath();
+          ctx.moveTo(particles[a].x, particles[a].y);
+          ctx.lineTo(particles[b].x, particles[b].y);
+          ctx.stroke();
+        }
+      }
+    }
+
+    particles.forEach(p => {
+      p.x += p.vx * I; p.y += p.vy * I; p.pulse += 0.04;
+      if (p.x < 0) p.x = w; else if (p.x > w) p.x = 0;
+      if (p.y < 0) p.y = h; else if (p.y > h) p.y = 0;
+      const ps = p.r + Math.sin(p.pulse) * 0.6;
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color;
+      ctx.shadowBlur = 8 * I;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, ps, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.shadowBlur = 0;
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+// ============== View Switching ==============
+function setView(name) {
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.add('active');
+  if (location.hash !== '#' + name) location.hash = '#' + name;
+}
+
+document.querySelectorAll('[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => setView(btn.dataset.view));
+});
+
+window.addEventListener('hashchange', () => {
+  const v = location.hash.replace('#', '') || 'leaderboard';
+  setView(v === 'control' ? 'control' : 'leaderboard');
+});
+
+// Sync entre pestañas
+window.addEventListener('storage', (e) => {
+  if (e.key === STORAGE_KEY && e.newValue) {
+    try {
+      const incoming = JSON.parse(e.newValue);
+      const beforeTop4 = getRanked().slice(0, 4).map(r => r.id);
+      const oldTotal = Object.values(state.sellers).reduce((a, b) => a + b, 0);
+      const newTotal = Object.values(incoming.sellers).reduce((a, b) => a + b, 0);
+      const oldHistLen = state.history.length;
+      state = incoming;
+      renderAll();
+      if (newTotal > oldTotal && state.history.length > oldHistLen) {
+        const last = state.history[state.history.length - 1];
+        const seller = SELLER_BY_ID[last.sellerId];
+        if (seller) {
+          const wasInTop = beforeTop4.includes(last.sellerId);
+          fireEvent({ type: wasInTop ? 'SALE_TOP' : 'SALE_OUTSIDER', sellerId: last.sellerId });
+          detectClimbAndLeader(beforeTop4);
+        }
+      }
+    } catch (err) {}
+  }
+  if (e.key === CEREMONY_KEY && e.newValue) {
+    try {
+      const data = JSON.parse(e.newValue);
+      showCeremony(data);
+    } catch (err) {}
+  }
+});
+
+// ============== Botones ==============
+document.getElementById('btnUndo').addEventListener('click', undoLastSale);
+
+let resetMode = false, resetTimer = null;
+const btnReset = document.getElementById('btnReset');
+btnReset.addEventListener('click', () => {
+  if (!resetMode) {
+    resetMode = true;
+    btnReset.classList.add('solid');
+    btnReset.textContent = '✓ CONFIRMAR';
+    if (resetTimer) clearTimeout(resetTimer);
+    resetTimer = setTimeout(() => {
+      resetMode = false;
+      btnReset.classList.remove('solid');
+      btnReset.textContent = '⟳ RESET';
+    }, 4000);
+  } else {
+    resetAll();
+    resetMode = false;
+    btnReset.classList.remove('solid');
+    btnReset.textContent = '⟳ RESET';
+    if (resetTimer) clearTimeout(resetTimer);
+  }
+});
+
+let weekMode = false, weekTimer = null;
+const btnWeek = document.getElementById('btnWeek');
+btnWeek.addEventListener('click', () => {
+  if (!weekMode) {
+    weekMode = true;
+    btnWeek.classList.add('confirm');
+    btnWeek.textContent = '✓ CONFIRMAR CIERRE';
+    if (weekTimer) clearTimeout(weekTimer);
+    weekTimer = setTimeout(() => {
+      weekMode = false;
+      btnWeek.classList.remove('confirm');
+      btnWeek.textContent = '🏁 CERRAR SEMANA';
+    }, 4000);
+  } else {
+    closeWeek(true);
+    weekMode = false;
+    btnWeek.classList.remove('confirm');
+    btnWeek.textContent = '🏁 CERRAR SEMANA';
+    if (weekTimer) clearTimeout(weekTimer);
+  }
+});
+
+// ============== Reloj ==============
+function updateClock() {
+  document.getElementById('clock').textContent =
+    new Date().toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+// ============== Init ==============
+const initialView = location.hash.replace('#', '') || 'leaderboard';
+setView(initialView === 'control' ? 'control' : 'leaderboard');
+prevTopIds = getRanked().slice(0, 4).map(r => r.id);
+prevLeader = getRanked()[0]?.id;
+renderAll();
+</script>
+</body>
+</html>
