@@ -196,6 +196,7 @@
     </div>
     <div class="cp-actions">
       <a href="./index.html" target="_blank" class="btn-ghost">▶ ABRIR ARENA</a>
+      <button class="btn-reveal" id="btnReveal">💰 REVELAR COMISIÓN DEL DÍA</button>
       <button class="btn-week" id="btnWeek">🏁 CERRAR SEMANA</button>
       <button class="btn-ghost" id="btnUndo">↩ DESHACER</button>
       <button class="btn-danger" id="btnReset">⟳ RESET</button>
@@ -220,6 +221,19 @@ function renderControlPanel() {
   const totalPages = SELLERS.reduce((s, x) => s + x.pages.length, 0);
   const leaderName = ranked[0]?.total > 0 ? ranked[0].name : '—';
 
+  // Comisión del día
+  let commissionLabel = '— No revelada';
+  let commissionColor = '#B47CFF';
+  if (state.commission && state.commission.todayDate === todayStr() && state.commission.todayAmount) {
+    commissionLabel = `$${state.commission.todayAmount}${state.commission.todayPremium ? ' ★' : ''}`;
+    commissionColor = state.commission.todayPremium ? '#FFD93D' : '#5EEAD4';
+  }
+
+  // Premium restantes este mes
+  const premiumUsed = (state.commission && state.commission.month === monthStr())
+    ? (state.commission.premiumUsedThisMonth || 0) : 0;
+  const premiumLeft = Math.max(0, 5 - premiumUsed);
+
   document.getElementById('cpStats').innerHTML = `
     <div class="stat-card" style="--accent: #5EEAD4; --accent-40: #5EEAD466; --accent-80: #5EEAD4cc;">
       <div class="label">VENTAS DE LA SEMANA</div>
@@ -229,13 +243,13 @@ function renderControlPanel() {
       <div class="label">LÍDER ACTUAL</div>
       <div class="value" style="color: #FFD93D;">${leaderName}</div>
     </div>
-    <div class="stat-card" style="--accent: #B47CFF; --accent-40: #B47CFF66; --accent-80: #B47CFFcc;">
-      <div class="label">META SEMANAL</div>
-      <div class="value" style="color: #B47CFF;">${WEEK_TARGET}</div>
+    <div class="stat-card" style="--accent: ${commissionColor}; --accent-40: ${commissionColor}66; --accent-80: ${commissionColor}cc;">
+      <div class="label">COMISIÓN DEL DÍA</div>
+      <div class="value" style="color: ${commissionColor};">${commissionLabel}</div>
     </div>
     <div class="stat-card" style="--accent: #FF4FB6; --accent-40: #FF4FB666; --accent-80: #FF4FB6cc;">
-      <div class="label">PÁGINAS</div>
-      <div class="value" style="color: #FF4FB6;">${totalPages}</div>
+      <div class="label">★ PREMIUM RESTANTES (MES)</div>
+      <div class="value" style="color: #FF4FB6;">${premiumLeft}/5</div>
     </div>
   `;
 
@@ -341,12 +355,50 @@ btnWeek.addEventListener('click', () => {
   }
 });
 
+// ============== Botón REVELAR COMISIÓN ==============
+const btnReveal = document.getElementById('btnReveal');
+btnReveal.addEventListener('click', () => {
+  Sounds.init(); // primer click activa el contexto de audio
+  const today = todayStr();
+  const alreadyRolled = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
+
+  if (alreadyRolled) {
+    if (!confirm(`Ya se reveló la comisión de hoy: $${state.commission.todayAmount} MXN.\n\n¿Quieres volver a mostrar la animación a los vendedores?`)) {
+      return;
+    }
+  }
+
+  triggerCommissionReveal();
+  renderAll();
+});
+
+function updateRevealBtn() {
+  const today = todayStr();
+  const alreadyRolled = state.commission && state.commission.todayDate === today && state.commission.todayAmount;
+  if (alreadyRolled) {
+    btnReveal.textContent = `✓ REVELADA: $${state.commission.todayAmount}${state.commission.todayPremium ? ' ★' : ''}`;
+  } else {
+    btnReveal.textContent = '💰 REVELAR COMISIÓN DEL DÍA';
+  }
+}
+
 // ============== Init ==============
 prevTopIds = getRanked().slice(0, 4).map(r => r.id);
 prevLeader = getRanked()[0]?.id;
 initParticles();
 setupCrossTabSync();
 renderAll();
+updateRevealBtn();
+
+// Activar audio context al primer click (browser policy)
+document.addEventListener('click', () => Sounds.init(), { once: true });
+
+// Re-render cuando cambia el state (incluye actualización de botón de revelar)
+const _renderAll_orig = renderAll;
+renderAll = function() {
+  _renderAll_orig();
+  updateRevealBtn();
+};
 </script>
 
 </body>

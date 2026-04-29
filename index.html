@@ -358,8 +358,23 @@
     </div>
 
     <div class="stats-footer" id="statsFooter"></div>
+
+    <!-- LEADERBOARD EN VIVO (comisiones acumuladas) -->
+    <div class="live-leaderboard">
+      <div class="live-lb-head">
+        <div class="live-lb-title"><span class="live-dot"></span>LEADERBOARD · EN VIVO · COMISIONES</div>
+        <div class="live-lb-info">
+          <span>HOY: <span class="commission-now" id="commissionNow">— · No revelada</span></span>
+          <span id="commissionPremiumLeft" style="color: rgba(255,79,182,0.8);">★ 5/5 PREMIUM</span>
+        </div>
+      </div>
+      <div class="live-lb-grid" id="liveLbGrid"></div>
+    </div>
   </div>
 </div>
+
+<!-- Botón flotante: toggle de sonido -->
+<button class="sound-toggle" id="soundToggle" title="Activar/silenciar sonido">🔊</button>
 
 <script src="./shared.js"></script>
 <script>
@@ -521,9 +536,56 @@ function renderStatsFooter() {
   host.innerHTML = parts.join('');
 }
 
+// ============== Leaderboard EN VIVO (comisiones) ==============
+function renderLiveLeaderboard() {
+  const grid = document.getElementById('liveLbGrid');
+  if (!grid) return;
+  const board = getEarningsBoard();
+  const maxEarned = Math.max(1, ...board.map(s => s.earned));
+
+  grid.innerHTML = board.map((s, i) => {
+    const pct = (s.earned / maxEarned) * 100;
+    const cls = i === 0 && s.earned > 0 ? 'first' : (i < 3 && s.earned > 0 ? 'top' : '');
+    return `
+      <div class="live-lb-row ${cls}" style="--accent: ${s.color}; --accent-alt: ${s.colorAlt}; --accent-15: ${s.color}26; --accent-40: ${s.color}66;">
+        <div class="live-lb-rank" style="color: ${s.color}; text-shadow: 0 0 10px ${s.color}">#${i + 1}</div>
+        <div>${avatarSVG(s.avatar, s.color, s.colorAlt, 36)}</div>
+        <div class="live-lb-name">${s.name}</div>
+        <div class="live-lb-sales"><strong>${s.total}</strong> ventas</div>
+        <div class="live-lb-money">
+          <div class="live-lb-money-bar">
+            <div class="live-lb-money-fill" style="width: ${pct}%"></div>
+          </div>
+          <div class="live-lb-money-amount">$${s.earned}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Mostrar comisión del día
+  const commissionEl = document.getElementById('commissionNow');
+  if (commissionEl) {
+    if (state.commission && state.commission.todayDate === todayStr() && state.commission.todayAmount) {
+      commissionEl.textContent = `$${state.commission.todayAmount} MXN${state.commission.todayPremium ? ' ★' : ''}`;
+      commissionEl.className = 'commission-now' + (state.commission.todayPremium ? ' premium' : '');
+    } else {
+      commissionEl.textContent = '— · No revelada hoy';
+      commissionEl.className = 'commission-now';
+    }
+  }
+
+  const premiumLeftEl = document.getElementById('commissionPremiumLeft');
+  if (premiumLeftEl) {
+    const used = (state.commission && state.commission.month === monthStr()) ? (state.commission.premiumUsedThisMonth || 0) : 0;
+    const left = Math.max(0, 5 - used);
+    premiumLeftEl.textContent = `★ ${left}/5 PREMIUM RESTANTES`;
+  }
+}
+
 function renderAll() {
   renderLeaderboard();
   renderStatsFooter();
+  renderLiveLeaderboard();
   resetIdleTimer();
 }
 
@@ -542,6 +604,24 @@ initParticles();
 setupCrossTabSync();
 renderAll();
 startPhraseRotator();
+
+// Toggle de sonido
+const soundBtn = document.getElementById('soundToggle');
+if (soundBtn) {
+  function updateSoundBtn() {
+    soundBtn.textContent = Sounds.enabled ? '🔊' : '🔇';
+    soundBtn.style.opacity = Sounds.enabled ? '1' : '0.5';
+  }
+  updateSoundBtn();
+  soundBtn.addEventListener('click', () => {
+    Sounds.toggle();
+    Sounds.init();   // primer click activa el contexto de audio
+    updateSoundBtn();
+  });
+}
+
+// Activar audio context al primer click en cualquier lugar (browser policy)
+document.addEventListener('click', () => Sounds.init(), { once: true });
 </script>
 
 </body>

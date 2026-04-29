@@ -909,3 +909,354 @@ function getCurrentStreak() {
 function getBestStreakOfWeek() {
   return computeBestStreak();
 }
+
+// ============================================================
+// SISTEMA DE COMISIONES + SONIDOS + REVELACIÓN
+// ============================================================
+
+const COMMISSION_KEY  = 'sales-arena-commission-v3';
+const COMMISSION_REVEAL_KEY = 'sales-arena-commission-reveal-v3';
+
+// Inicializar commission state si no existe
+if (!state.commission) {
+  state.commission = {
+    todayDate: null,           // YYYY-MM-DD del último roll
+    todayAmount: null,         // monto actual ($12-$30)
+    todayPremium: false,       // si hoy fue premium
+    month: null,               // YYYY-MM
+    premiumUsedThisMonth: 0,   // cuántas premium se han dado este mes
+    earned: {}                 // { sellerId: total $ acumulado }
+  };
+  saveState();
+}
+
+// === Helpers de fecha ===
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function monthStr() { return todayStr().slice(0, 7); }
+
+// === Roll de comisión inteligente ===
+function rollCommissionForToday() {
+  const today = todayStr();
+  const month = monthStr();
+
+  // Reset al cambiar de mes
+  if (state.commission.month !== month) {
+    state.commission.month = month;
+    state.commission.premiumUsedThisMonth = 0;
+  }
+
+  // Si ya se rolló hoy, devolver el actual sin cambios
+  if (state.commission.todayDate === today && state.commission.todayAmount != null) {
+    return {
+      amount: state.commission.todayAmount,
+      premium: state.commission.todayPremium,
+      alreadyRolled: true
+    };
+  }
+
+  // Calcular probabilidad inteligente de premium
+  const date = new Date();
+  const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  const daysLeft  = totalDays - date.getDate() + 1;
+  const premiumLeft = Math.max(0, 5 - (state.commission.premiumUsedThisMonth || 0));
+
+  let premiumChance = 0;
+  if (premiumLeft > 0 && daysLeft > 0) {
+    premiumChance = premiumLeft / daysLeft;
+    premiumChance = Math.max(0.06, Math.min(0.55, premiumChance));
+  }
+
+  const isPremium = premiumLeft > 0 && Math.random() < premiumChance;
+  const amount = isPremium
+    ? 25 + Math.floor(Math.random() * 6)   // 25-30
+    : 12 + Math.floor(Math.random() * 13); // 12-24
+
+  state.commission.todayDate = today;
+  state.commission.todayAmount = amount;
+  state.commission.todayPremium = isPremium;
+  if (isPremium) state.commission.premiumUsedThisMonth += 1;
+  saveState();
+
+  return { amount, premium: isPremium, alreadyRolled: false };
+}
+
+// === Acumulado por vendedor ===
+function getEarningsBoard() {
+  return SELLERS.map(s => ({
+    ...s,
+    earned: state.commission.earned[s.id] || 0,
+    total: state.sellers[s.id] || 0
+  })).sort((a, b) => (b.earned - a.earned) || a.name.localeCompare(b.name));
+}
+
+// === Hook al hacer una venta: sumar comisión ===
+function applyCommissionToSale(sellerId) {
+  if (!state.commission.todayAmount) return;
+  state.commission.earned[sellerId] = (state.commission.earned[sellerId] || 0) + state.commission.todayAmount;
+  saveState();
+}
+
+// === Disparar revelación cross-tab (la contadora pica el botón) ===
+function triggerCommissionReveal() {
+  const result = rollCommissionForToday();
+  const data = {
+    amount: result.amount,
+    premium: result.premium,
+    alreadyRolled: result.alreadyRolled,
+    ts: Date.now()
+  };
+  try { localStorage.setItem(COMMISSION_REVEAL_KEY, JSON.stringify(data)); } catch (e) {}
+  showCommissionReveal(data);
+  return data;
+}
+
+// ============================================================
+// SONIDOS — Web Audio API (sintetizados, sin archivos)
+// ============================================================
+const Sounds = {
+  enabled: (function() {
+    try { return localStorage.getItem('sa-sound') !== 'off'; } catch (e) { return true; }
+  })(),
+  ctx: null,
+  master: null,
+
+  init() {
+    if (this.ctx) return;
+    try {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      this.master = this.ctx.createGain();
+      this.master.gain.value = 0.4;
+      this.master.connect(this.ctx.destination);
+    } catch (e) {}
+  },
+
+  resume() {
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+  },
+
+  toggle() {
+    this.enabled = !this.enabled;
+    try { localStorage.setItem('sa-sound', this.enabled ? 'on' : 'off'); } catch (e) {}
+    return this.enabled;
+  },
+
+  beep(freq, duration = 0.1, type = 'square', startGain = 0.3) {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const osc = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.connect(g); g.connect(this.master);
+    g.gain.setValueAtTime(startGain, this.ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+    osc.start();
+    osc.stop(this.ctx.currentTime + duration);
+  },
+
+  // Venta normal — Mario coin "ding!"
+  sale() {
+    this.beep(523.25, 0.05, 'square', 0.3);   // C5
+    setTimeout(() => this.beep(783.99, 0.12, 'square', 0.3), 60);  // G5
+  },
+
+  // Venta especial / outsider — más alto
+  saleOut() {
+    this.beep(659.25, 0.05, 'square', 0.3);
+    setTimeout(() => this.beep(987.77, 0.12, 'square', 0.3), 60);
+  },
+
+  // Sube de posición — riser
+  climb() {
+    this.beep(440, 0.04, 'sawtooth', 0.2);
+    setTimeout(() => this.beep(554, 0.04, 'sawtooth', 0.2), 50);
+    setTimeout(() => this.beep(659, 0.04, 'sawtooth', 0.2), 100);
+    setTimeout(() => this.beep(880, 0.1, 'sawtooth', 0.25), 150);
+  },
+
+  // Nuevo líder — fanfarria corta
+  newLeader() {
+    this.beep(523, 0.08, 'square', 0.3);
+    setTimeout(() => this.beep(659, 0.08, 'square', 0.3), 80);
+    setTimeout(() => this.beep(784, 0.08, 'square', 0.3), 160);
+    setTimeout(() => this.beep(1047, 0.18, 'square', 0.4), 240);
+  },
+
+  // Tick para slot machine
+  tick() {
+    this.beep(1200, 0.025, 'square', 0.15);
+  },
+
+  // Drumroll (ruido blanco)
+  drumroll(durationMs = 2500) {
+    if (!this.enabled) return;
+    this.init(); this.resume();
+    if (!this.ctx) return;
+    const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * durationMs / 1000, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * 0.6;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = 600;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.001, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.15, this.ctx.currentTime + durationMs / 1000 * 0.8);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + durationMs / 1000);
+    noise.connect(filter); filter.connect(gain); gain.connect(this.master);
+    noise.start();
+  },
+
+  // Reveal premium — ka-ching épico
+  bigReveal() {
+    this.beep(523.25, 0.1, 'square', 0.4);
+    setTimeout(() => this.beep(659.25, 0.1, 'square', 0.4), 100);
+    setTimeout(() => this.beep(783.99, 0.1, 'square', 0.4), 200);
+    setTimeout(() => this.beep(1046.5, 0.2, 'square', 0.45), 300);
+    setTimeout(() => this.beep(1318.5, 0.3, 'square', 0.45), 500);
+  },
+
+  // Reveal normal
+  smallReveal() {
+    this.beep(659, 0.1, 'square', 0.35);
+    setTimeout(() => this.beep(880, 0.18, 'square', 0.35), 100);
+  }
+};
+
+// Hook el sonido a las ventas
+const _addSale_orig = addSale;
+addSale = function(page) {
+  const sellerId = SELLER_BY_PAGE[page];
+  // Aplicar comisión si está rolada
+  _addSale_orig(page);
+  if (sellerId && state.commission.todayAmount) {
+    applyCommissionToSale(sellerId);
+  }
+  Sounds.play && Sounds.sale();
+};
+
+// Hook a fireEvent para sonidos
+const _fireEvent_orig = fireEvent;
+fireEvent = function(ev) {
+  _fireEvent_orig(ev);
+  if (ev.type === 'CLIMB') Sounds.climb();
+  if (ev.type === 'NEW_LEADER') Sounds.newLeader();
+  if (ev.type === 'SALE_OUTSIDER') Sounds.saleOut();
+};
+
+// ============================================================
+// MODAL DE REVELACIÓN — Tipo Squid Game / Slot Machine
+// ============================================================
+function showCommissionReveal(data) {
+  // Limpiar revelaciones anteriores
+  document.querySelectorAll('.commission-reveal-overlay').forEach(el => el.remove());
+
+  const overlay = document.createElement('div');
+  overlay.className = 'commission-reveal-overlay';
+  if (data.premium) overlay.classList.add('premium');
+
+  overlay.innerHTML = `
+    <div class="reveal-rays"></div>
+    <div class="reveal-shapes">
+      <div class="shape circle"></div>
+      <div class="shape triangle"></div>
+      <div class="shape square"></div>
+    </div>
+    <div class="reveal-content">
+      <div class="reveal-tag">▸ COMISIÓN DEL DÍA ◂</div>
+      <div class="reveal-amount" id="revealAmount">$00</div>
+      <div class="reveal-status" id="revealStatus">CALCULANDO...</div>
+      <div class="reveal-message" id="revealMessage">¡SUERTE!</div>
+      ${data.premium ? '<div class="reveal-premium-badge">★ DÍA PREMIUM ★</div>' : ''}
+    </div>
+  `;
+  document.body.appendChild(overlay);
+  void overlay.offsetWidth;
+  overlay.classList.add('visible');
+
+  // Drumroll
+  Sounds.drumroll(2800);
+
+  // Slot machine animation
+  const amountEl  = overlay.querySelector('#revealAmount');
+  const statusEl  = overlay.querySelector('#revealStatus');
+  const messageEl = overlay.querySelector('#revealMessage');
+  const target = data.amount;
+  const range  = data.premium ? [25, 30] : [12, 24];
+
+  const start = Date.now();
+  const duration = 3000;
+  let lastChange = 0;
+  let lastTickTime = 0;
+
+  function frame() {
+    const t = (Date.now() - start) / duration;
+    if (t >= 1) {
+      amountEl.textContent = `$${target}`;
+      amountEl.classList.add('final');
+      statusEl.textContent = '¡COMISIÓN DEL DÍA!';
+      messageEl.textContent = data.premium ? '¡DÍA ESPECIAL · A DARLE CON TODO! 🔥' : '¡SUERTE · A VENDER!';
+
+      if (data.premium) {
+        Sounds.bigReveal();
+        setTimeout(() => massiveConfetti('#FFD93D', '#FF8C42'), 100);
+        setTimeout(() => massiveConfetti('#FF4FB6', '#FFD93D'), 700);
+        setTimeout(() => massiveConfetti('#FFD93D', '#5EEAD4'), 1400);
+      } else {
+        Sounds.smallReveal();
+        setTimeout(() => smallConfetti('#5EEAD4'), 100);
+      }
+      return;
+    }
+
+    // Cambiar el número con velocidad decreciente
+    const easeT = t * t; // ease-in (acelera al inicio, se desacelera al final)
+    const interval = 50 + 350 * easeT;
+    if (Date.now() - lastChange >= interval) {
+      const fake = range[0] + Math.floor(Math.random() * (range[1] - range[0] + 1));
+      amountEl.textContent = `$${fake}`;
+      lastChange = Date.now();
+    }
+
+    // Tick sound (cada cierto tiempo)
+    if (Date.now() - lastTickTime >= Math.max(80, interval * 0.7)) {
+      Sounds.tick();
+      lastTickTime = Date.now();
+    }
+
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // Auto-cerrar después de 8s
+  setTimeout(() => {
+    overlay.classList.add('leaving');
+    setTimeout(() => overlay.remove(), 800);
+  }, 8000);
+
+  // Click anywhere to dismiss
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      overlay.classList.add('leaving');
+      setTimeout(() => overlay.remove(), 800);
+    }
+  });
+}
+
+// Listener cross-tab para recibir la revelación en el sales arena
+window.addEventListener('storage', (e) => {
+  if (e.key === COMMISSION_REVEAL_KEY && e.newValue) {
+    try {
+      const data = JSON.parse(e.newValue);
+      // Refrescar state local
+      state = loadState();
+      showCommissionReveal(data);
+      if (typeof renderAll === 'function') renderAll();
+    } catch (err) {}
+  }
+});

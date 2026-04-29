@@ -611,3 +611,342 @@ button {
   color: var(--accent); letter-spacing: 0.08em;
   margin-top: 2px;
 }
+
+/* ========================================================
+   MODAL DE REVELACIÓN DE COMISIÓN — Squid Game / Slot
+   ======================================================== */
+.commission-reveal-overlay {
+  position: fixed; inset: 0; z-index: 250;
+  background:
+    radial-gradient(circle at center, rgba(255,79,182,0.15) 0%, transparent 50%),
+    rgba(5, 0, 12, 0.97);
+  backdrop-filter: blur(16px);
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 0.5s;
+  overflow: hidden;
+  cursor: pointer;
+}
+.commission-reveal-overlay.visible { opacity: 1; }
+.commission-reveal-overlay.leaving { opacity: 0; }
+
+/* Rayos rotantes */
+.commission-reveal-overlay .reveal-rays {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 200vmax; height: 200vmax;
+  pointer-events: none;
+  background:
+    conic-gradient(from 0deg,
+      transparent 0deg, rgba(255,79,182,0.08) 12deg, transparent 24deg,
+      transparent 60deg, rgba(180,124,255,0.06) 72deg, transparent 84deg,
+      transparent 120deg, rgba(255,217,61,0.06) 132deg, transparent 144deg,
+      transparent 180deg, rgba(255,79,182,0.07) 192deg, transparent 204deg,
+      transparent 240deg, rgba(180,124,255,0.06) 252deg, transparent 264deg,
+      transparent 300deg, rgba(255,217,61,0.06) 312deg, transparent 324deg,
+      transparent 360deg);
+  transform: translate(-50%, -50%);
+  animation: ray-rotate 30s linear infinite;
+}
+.commission-reveal-overlay.premium .reveal-rays {
+  background:
+    conic-gradient(from 0deg,
+      transparent 0deg, rgba(255,217,61,0.18) 12deg, transparent 24deg,
+      transparent 60deg, rgba(255,140,66,0.14) 72deg, transparent 84deg,
+      transparent 120deg, rgba(255,79,182,0.1) 132deg, transparent 144deg,
+      transparent 180deg, rgba(255,217,61,0.18) 192deg, transparent 204deg,
+      transparent 240deg, rgba(255,140,66,0.14) 252deg, transparent 264deg,
+      transparent 300deg, rgba(255,79,182,0.1) 312deg, transparent 324deg,
+      transparent 360deg);
+  animation: ray-rotate 15s linear infinite;
+}
+
+/* Símbolos Squid Game flotando */
+.reveal-shapes {
+  position: absolute; inset: 0; pointer-events: none;
+  overflow: hidden;
+}
+.reveal-shapes .shape {
+  position: absolute;
+  border: 3px solid #FF4FB6;
+  filter: drop-shadow(0 0 14px #FF4FB6);
+  opacity: 0.18;
+}
+.reveal-shapes .circle {
+  width: 100px; height: 100px; border-radius: 50%;
+  top: 12%; left: 8%;
+  animation: float-y 4s infinite ease-in-out, spin-reveal 18s linear infinite;
+}
+.reveal-shapes .triangle {
+  width: 0; height: 0;
+  border-left: 50px solid transparent;
+  border-right: 50px solid transparent;
+  border-bottom: 86px solid #FF4FB6;
+  border-top: none;
+  background: none;
+  filter: drop-shadow(0 0 14px #FF4FB6);
+  bottom: 14%; right: 10%;
+  animation: float-y 5s 1s infinite ease-in-out, spin-reveal 22s linear infinite reverse;
+}
+.reveal-shapes .square {
+  width: 90px; height: 90px;
+  top: 60%; left: 7%;
+  animation: float-y 4.5s 0.5s infinite ease-in-out, spin-reveal 20s linear infinite;
+}
+.commission-reveal-overlay.premium .reveal-shapes .shape {
+  border-color: #FFD93D;
+  filter: drop-shadow(0 0 14px #FFD93D);
+}
+.commission-reveal-overlay.premium .reveal-shapes .triangle {
+  border-bottom-color: #FFD93D;
+}
+
+/* Contenido central */
+.reveal-content {
+  position: relative; z-index: 5;
+  text-align: center;
+  padding: 32px 48px;
+}
+
+.reveal-tag {
+  font-family: var(--font-mono);
+  font-size: clamp(13px, 1.4vw, 18px);
+  letter-spacing: 0.6em;
+  color: #B47CFF;
+  text-shadow: 0 0 16px #B47CFF;
+  margin-bottom: 24px;
+  animation: blink-led 2s infinite ease-in-out;
+}
+.commission-reveal-overlay.premium .reveal-tag {
+  color: #FFD93D;
+  text-shadow: 0 0 20px #FFD93D, 0 0 40px #FF8C42;
+}
+
+.reveal-amount {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(80px, 18vw, 240px);
+  line-height: 1;
+  background: linear-gradient(180deg, #fff 0%, #B47CFF 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 30px #B47CFF);
+  letter-spacing: 0.02em;
+  margin: 16px 0;
+}
+.commission-reveal-overlay.premium .reveal-amount {
+  background: linear-gradient(180deg, #FFD93D 0%, #FF8C42 50%, #FF4FB6 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 50px #FFD93D) drop-shadow(0 0 100px #FF8C42);
+}
+.reveal-amount.final {
+  animation: bounce-pop 0.7s cubic-bezier(.34, 1.56, .64, 1);
+}
+
+.reveal-status {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(16px, 2vw, 26px);
+  color: #fff;
+  letter-spacing: 0.18em;
+  text-shadow: 0 0 18px #B47CFF;
+  margin-bottom: 12px;
+}
+.commission-reveal-overlay.premium .reveal-status {
+  text-shadow: 0 0 18px #FFD93D, 0 0 36px #FF8C42;
+}
+
+.reveal-message {
+  font-family: var(--font-mono);
+  font-size: clamp(13px, 1.5vw, 18px);
+  color: #5EEAD4;
+  letter-spacing: 0.25em;
+  text-shadow: 0 0 14px #5EEAD4;
+}
+.commission-reveal-overlay.premium .reveal-message {
+  color: #FFD93D;
+  text-shadow: 0 0 14px #FFD93D;
+}
+
+.reveal-premium-badge {
+  display: inline-block;
+  margin-top: 18px;
+  padding: 8px 18px;
+  background: linear-gradient(135deg, #FFD93D, #FF8C42);
+  color: #0a0118;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(13px, 1.4vw, 18px);
+  letter-spacing: 0.25em;
+  border-radius: 999px;
+  box-shadow: 0 0 30px #FFD93D, 0 4px 16px rgba(0,0,0,0.5);
+  animation: bar-glow-pulse 1.2s infinite ease-in-out;
+}
+
+/* ========================================================
+   LEADERBOARD · EN VIVO (comisiones acumuladas)
+   ======================================================== */
+.live-leaderboard {
+  margin-top: 24px;
+  max-width: 1600px;
+  margin-left: auto; margin-right: auto;
+  padding: 0 12px;
+  position: relative; z-index: 3;
+}
+
+.live-lb-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px; flex-wrap: wrap; gap: 12px;
+}
+.live-lb-title {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 18px;
+  letter-spacing: 0.15em;
+  background: linear-gradient(90deg, #5EEAD4, #FFD93D, #FF8C42);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px rgba(94,234,212,0.5));
+  display: flex; align-items: center; gap: 10px;
+}
+.live-lb-title .live-dot {
+  width: 9px; height: 9px;
+}
+.live-lb-info {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: rgba(255,255,255,0.55);
+  display: flex; gap: 16px;
+}
+.live-lb-info .commission-now {
+  color: #FFD93D;
+  text-shadow: 0 0 8px #FFD93D;
+  font-weight: 700;
+}
+.live-lb-info .commission-now.premium {
+  color: #FF4FB6;
+  text-shadow: 0 0 10px #FF4FB6;
+}
+
+.live-lb-grid {
+  background: rgba(20,8,40,0.5);
+  border: 1px solid rgba(180,124,255,0.2);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.live-lb-row {
+  display: grid;
+  grid-template-columns: 50px 44px 1fr 120px 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  transition: background 0.3s;
+}
+.live-lb-row:last-child { border-bottom: none; }
+.live-lb-row.top { background: var(--accent-15, rgba(255,217,61,0.08)); }
+.live-lb-row.first { background: linear-gradient(90deg, rgba(255,217,61,0.18), transparent); }
+
+.live-lb-rank {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 16px;
+}
+.live-lb-name {
+  font-family: var(--font-display); font-weight: 700;
+  font-size: 13px; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.live-lb-sales {
+  font-family: var(--font-mono); font-size: 11px;
+  color: rgba(255,255,255,0.5);
+  text-align: right;
+}
+.live-lb-sales strong {
+  color: var(--accent); font-family: var(--font-display);
+  font-size: 13px; font-weight: 900;
+}
+.live-lb-money {
+  display: flex; align-items: center; gap: 8px;
+}
+.live-lb-money-bar {
+  flex: 1;
+  height: 16px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--accent-40, rgba(180,124,255,0.4));
+}
+.live-lb-money-fill {
+  position: absolute; top: 0; bottom: 0; left: 0;
+  background: linear-gradient(90deg, var(--accent-alt), var(--accent), var(--accent-alt));
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+  border-radius: 999px;
+  box-shadow: 0 0 12px var(--accent);
+  transition: width 0.8s cubic-bezier(.34, 1.56, .64, 1);
+}
+.live-lb-money-amount {
+  font-family: var(--font-display); font-weight: 900;
+  font-size: 14px;
+  color: var(--accent);
+  text-shadow: 0 0 10px var(--accent);
+  white-space: nowrap;
+  min-width: 70px;
+  text-align: right;
+}
+
+/* ========================================================
+   TOGGLE DE SONIDO
+   ======================================================== */
+.sound-toggle {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 100;
+  width: 40px; height: 40px;
+  border-radius: 999px;
+  background: rgba(20,8,40,0.7);
+  border: 1px solid rgba(180,124,255,0.4);
+  color: #fff; font-size: 18px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+}
+.sound-toggle:hover { border-color: #B47CFF; transform: scale(1.05); }
+
+/* ========================================================
+   BOTÓN GRANDE DE REVELAR COMISIÓN (panel)
+   ======================================================== */
+.btn-reveal {
+  padding: 14px 22px;
+  background: linear-gradient(135deg, #FF4FB6, #B47CFF);
+  border: none; border-radius: 10px;
+  font-family: var(--font-display); font-weight: 900; font-size: 13px;
+  letter-spacing: 0.18em; color: #fff;
+  box-shadow: 0 4px 16px #FF4FB6, 0 0 30px rgba(255,79,182,0.4);
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.btn-reveal::before {
+  content: '';
+  position: absolute; top: 0; left: -100%;
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+  animation: shimmer 3s linear infinite;
+}
+.btn-reveal:hover { transform: translateY(-2px); box-shadow: 0 6px 24px #FF4FB6, 0 0 50px rgba(255,79,182,0.6); }
+.btn-reveal:disabled { opacity: 0.7; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .live-lb-row {
+    grid-template-columns: 32px 32px 1fr 70px;
+    gap: 8px; padding: 6px 10px;
+  }
+  .live-lb-row .live-lb-money { display: none; }
+  .live-lb-row .live-lb-money-amount { display: block; }
+  .live-lb-name { font-size: 11px; }
+  .reveal-amount { font-size: clamp(60px, 18vw, 120px); }
+}
